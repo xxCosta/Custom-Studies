@@ -22,7 +22,7 @@ SCSFExport scsf_ToggleJump(SCStudyInterfaceRef sc)
 		sc.AutoLoop = 0;  //Automatic looping is enabled. 
         sc.ReceiveKeyboardKeyEvents = 1; // calls this study function everytime a key is pressed
         sc.SupportKeyboardModifierStates = 1; 
-        return;
+ return;
 	}
     
     int keyboardCode= sc.KeyboardKeyEventCode ;
@@ -35,7 +35,8 @@ SCSFExport scsf_ToggleJump(SCStudyInterfaceRef sc)
     }
 
     if (keyboardCode == 68){ 
-        //INITIALIZE or START/STOP TOGGLE
+        //	CLICK THE D KEY TO 
+        //	INITIALIZE or START/STOP TOGGLE
         int replayStatus = sc.GetReplayStatusFromChart(chartNum);
         if (replayStatus == 0){ 
 	        replayDate.SetDateTimeYMDHMS(2023,10,30,0,0,0);
@@ -51,6 +52,8 @@ SCSFExport scsf_ToggleJump(SCStudyInterfaceRef sc)
     }
 
     if (keyboardCode == 69){
+        //  CLICK THE E KEY TO
+        //  FAST FORWARD TO NEXT SESSION
         SCDateTime currentReplayTime = sc.LatestDateTimeForLastBar;
         int hour = currentReplayTime.GetHour();
         int hoursTillNextSession = 20 - hour;
@@ -65,6 +68,8 @@ SCSFExport scsf_ToggleJump(SCStudyInterfaceRef sc)
     }
 
     if (keyboardCode == 70) {
+        //  CLICK THE F KEY TO
+        //  TOGGLE FAST FORWARD
         if (speed == 4000){
             speed = 4;
         }else{
@@ -80,7 +85,6 @@ SCSFExport scsf_ToggleJump(SCStudyInterfaceRef sc)
 
 SCSFExport scsf_KeyboardCodeFinder(SCStudyInterfaceRef sc)
 {
-	// Section 1 - Set the configuration variables and defaults
 	if (sc.SetDefaults)
 	{
 		sc.GraphName = "Keyboard Code Finder";
@@ -91,8 +95,6 @@ SCSFExport scsf_KeyboardCodeFinder(SCStudyInterfaceRef sc)
 		return;
 	}
 	
-	
-	// Section 2 - Do data processing here
     if (sc.KeyboardKeyEventCode != 0 ){ // != 0 to prevent constant logging
         SCString msg;
         int keyboardCode = sc.KeyboardKeyEventCode;
