@@ -589,6 +589,9 @@ public:
 		// 2773
 		int DrawTextAtEnd = -1;
 
+		// 2784
+		int ShowNumberOfTrades = -1;
+
 		// Note: When adding new members, remember to update CopyAndUpdateUseToolStruct function.
 
 
@@ -728,6 +731,11 @@ public:
 			if (GetVersion() >= 2773)
 			{
 				DrawTextAtEnd = DefaultUseTool.DrawTextAtEnd;
+			}
+
+			if (GetVersion() >= 2784)
+			{
+				ShowNumberOfTrades = DefaultUseTool.ShowNumberOfTrades;
 			}
 		}
 
@@ -3216,8 +3224,8 @@ struct s_TradeStatistics
 	double ClosedTradesTotalProfit = 0;
 	double ClosedTradesTotalLoss = 0;
 	double ProfitFactor = 0;
-	double EquityPeak = 0;
-	double EquityValley = 0;
+	double HighestCumulativeProfit = 0;
+	double LowestCumulativeLoss = 0;
 	double MaximumRunup = 0;
 	double MaximumDrawdown = 0;
 	double MaximumFlatToFlatTradeOpenProfit = 0;

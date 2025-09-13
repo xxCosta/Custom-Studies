@@ -1,0 +1,9 @@
+
+C:\SierraChart\ACS_Source>call "C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\VC\Auxiliary\Build\vcvarsall.bat" amd64 
+**********************************************************************
+** Visual Studio 2019 Developer Command Prompt v16.11.24
+** Copyright (c) 2021 Microsoft Corporation
+**********************************************************************
+[vcvarsall.bat] Environment initialized for: 'x64'
+'cl' is not recognized as an internal or external command,
+operable program or batch file.

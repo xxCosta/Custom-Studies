@@ -7,7 +7,7 @@
 // SC_DLL_VERSION gets updated only when there have been changes to the DLL
 // study interface.  This will be set to the Sierra Chart version number
 // that includes the changes made to the interface.
-#define SC_DLL_VERSION 2781
+#define SC_DLL_VERSION 2784
 
 
 const int MINIMUM_DLL_VERSION = 2155;

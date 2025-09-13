@@ -1603,47 +1603,45 @@ SCSFExport scsf_VerticalTimeLine(SCStudyInterfaceRef sc)
 		Input_Version.SetInt(3);
 	}
 
-	int NumberForwardBars = 0;
+	int NumberForwardBars = -1; // Needed in order to check the array size properly since the study looks forward 1 bar.
 	if(Input_ForwardProject.GetYesNo())
 	{
 		//Subtracting 1 since the study references one bar ahead
-		NumberForwardBars = sc.NumberOfForwardColumns-1;
+		NumberForwardBars = sc.NumberOfForwardColumns - 1;
 		Subgraph_TimeLine.ExtendedArrayElementsToGraph = NumberForwardBars;
 		Subgraph_TimeLineBottom.ExtendedArrayElementsToGraph = NumberForwardBars;
 	}
 
-	const int AllowedDayOfWeek = Input_DayOfWeek.GetIndex() - 1;
+	const int AllowedDayOfWeek = Input_DayOfWeek.GetIndex();
 
 	int NearestDateTimeIndex = -1;
 
 	for (int BarIndex = sc.UpdateStartIndex; BarIndex < (sc.ArraySize + NumberForwardBars); BarIndex++)
 	{
-		if (AllowedDayOfWeek >= 0)
+		if (AllowedDayOfWeek > 0)
 		{
-			if (sc.BaseDateTimeIn[BarIndex].GetDayOfWeekMondayBased() != AllowedDayOfWeek)
+			if (sc.BaseDateTimeIn[BarIndex].GetDayOfWeekMondayBased() != AllowedDayOfWeek - 1)
+			{
+				Subgraph_TimeLine[BarIndex] = 0.0f;
+				Subgraph_TimeLineBottom[BarIndex] = 0.0f;
 				continue;
+			}
 		}
 
 		const SCDateTimeMS TimeLineDateTime(sc.BaseDateTimeIn[BarIndex].GetDate(), Input_TimeOfLine.GetTime());
 
-		if(sc.BaseDateTimeIn[BarIndex - 1].GetDate() != sc.BaseDateTimeIn[BarIndex].GetDate())
+		if (sc.BaseDateTimeIn[BarIndex].GetDate() != sc.BaseDateTimeIn[BarIndex + 1].GetDate())
 			NearestDateTimeIndex = -1;
 
-		if(NearestDateTimeIndex == -1)
+		if (Input_MatchingMethod.GetIndex() == 0)
 		{
-			if (Input_MatchingMethod.GetIndex() == 0)
-			{
-				NearestDateTimeIndex
-					= sc.GetNearestMatchForSCDateTimeExtended(sc.ChartNumber, TimeLineDateTime);
-			}
-			else
-			{
-				if (TimeLineDateTime > sc.BaseDateTimeIn[BarIndex - 1]
-					&& TimeLineDateTime <= sc.BaseDateTimeIn[BarIndex])
-				{
-					NearestDateTimeIndex = BarIndex;
-				}
-			}
+			NearestDateTimeIndex = sc.GetNearestMatchForSCDateTimeExtended(sc.ChartNumber, TimeLineDateTime);
+		}
+		else if (NearestDateTimeIndex == -1
+			&& TimeLineDateTime >= sc.BaseDateTimeIn[BarIndex]
+			&& TimeLineDateTime < sc.BaseDateTimeIn[BarIndex + 1])
+		{
+			NearestDateTimeIndex = BarIndex;
 		}
 
 		SCDateTimeMS TimeMargin;
@@ -1797,7 +1795,7 @@ SCSFExport scsf_VerticalDateTimeLine(SCStudyInterfaceRef sc)
 	if(Input_ForwardProject.GetYesNo())
 	{
 		// Subtracting 1 since the study references one bar ahead
-		NumberForwardBars = sc.NumberOfForwardColumns -1;
+		NumberForwardBars = sc.NumberOfForwardColumns - 1;
 
 		Subgraph_TimeLine.ExtendedArrayElementsToGraph = NumberForwardBars;
 		Subgraph_TimeLineBottom.ExtendedArrayElementsToGraph = NumberForwardBars;
@@ -1810,23 +1808,19 @@ SCSFExport scsf_VerticalDateTimeLine(SCStudyInterfaceRef sc)
 
 	int NearestDateTimeIndex = -1;
 
-	for (int Index = sc.UpdateStartIndex; Index < (sc.ArraySize + NumberForwardBars); Index++)
+	for (int BarIndex = sc.UpdateStartIndex; BarIndex < (sc.ArraySize + NumberForwardBars); BarIndex++)
 	{
-
 		SCDateTime TimeLineDateTime(Input_DateTimeOfLine.GetDateTime());
 
-
-		if(NearestDateTimeIndex == -1)
+		if (Input_MatchingMethod.GetIndex() == 0)
 		{
-			if (Input_MatchingMethod.GetIndex() == 0)
-				NearestDateTimeIndex = sc.GetNearestMatchForSCDateTimeExtended(sc.ChartNumber, TimeLineDateTime);
-			else
-			{
-
-				if (TimeLineDateTime > sc.BaseDateTimeIn[Index - 1]
-				&& TimeLineDateTime <= sc.BaseDateTimeIn[Index])
-					NearestDateTimeIndex = Index;
-			}
+			NearestDateTimeIndex = sc.GetNearestMatchForSCDateTimeExtended(sc.ChartNumber, TimeLineDateTime);
+		}
+		else if (NearestDateTimeIndex == -1
+			&& TimeLineDateTime > sc.BaseDateTimeIn[BarIndex]
+			&& TimeLineDateTime <= sc.BaseDateTimeIn[BarIndex + 1])
+		{
+			NearestDateTimeIndex = BarIndex;
 		}
 
 		SCDateTime TimeMargin;
@@ -1834,29 +1828,29 @@ SCSFExport scsf_VerticalDateTimeLine(SCStudyInterfaceRef sc)
 		SCDateTime EarlierTime = TimeLineDateTime - TimeMargin;
 		SCDateTime LaterTime = TimeLineDateTime + TimeMargin;
 
-		if (Index == NearestDateTimeIndex
-			&& sc.BaseDateTimeIn[Index] >= EarlierTime
-			&& sc.BaseDateTimeIn[Index] <= LaterTime)
+		if (BarIndex == NearestDateTimeIndex
+			&& sc.BaseDateTimeIn[BarIndex] >= EarlierTime
+			&& sc.BaseDateTimeIn[BarIndex] <= LaterTime)
 		{
-			Subgraph_TimeLine[Index] = 100;
-			Subgraph_TimeLineBottom[Index] = -100;
+			Subgraph_TimeLine[BarIndex] = 100;
+			Subgraph_TimeLineBottom[BarIndex] = -100;
 		}
 		else
 		{
-			Subgraph_TimeLine[Index] = 0;
-			Subgraph_TimeLineBottom[Index] = 0;
+			Subgraph_TimeLine[BarIndex] = 0;
+			Subgraph_TimeLineBottom[BarIndex] = 0;
 		}
 
-		if (Subgraph_TimeLine[Index] == 0)
+		if (Subgraph_TimeLine[BarIndex] == 0)
 			continue;
 
 
 		if(Input_DisplayCustomLabel.GetYesNo() && !sc.HideStudy )
 		{
-			if(Index == ChartDrawingLastUsedIndex)
+			if(BarIndex == ChartDrawingLastUsedIndex)
 				continue;
 
-			ChartDrawingLastUsedIndex = Index;
+			ChartDrawingLastUsedIndex = BarIndex;
 
 			s_UseTool Tool;
 			Tool.ChartNumber = sc.ChartNumber;
@@ -1865,7 +1859,7 @@ SCSFExport scsf_VerticalDateTimeLine(SCStudyInterfaceRef sc)
 			//Tool.LineNumber //Automatically set
 			Tool.AddMethod = UTAM_ADD_OR_ADJUST;
 
-			Tool.BeginIndex = Index;
+			Tool.BeginIndex = BarIndex;
 			Tool.UseRelativeVerticalValues = true;
 			Tool.BeginValue = static_cast<float>(Input_VerticalPositionPercent.GetInt());
 			Tool.Text = sc.TextInput;
@@ -6282,7 +6276,6 @@ SCSFExport scsf_ValueAreaForBars(SCStudyInterfaceRef sc)
 
 		Input_ValueAreaPercentage.Name = "Value Area Percentage";
 		Input_ValueAreaPercentage.SetFloat(70.0f);
-
 
 		return;
 	}

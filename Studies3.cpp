@@ -842,6 +842,7 @@ SCSFExport scsf_VolumeWeightedAveragePrice(SCStudyInterfaceRef sc)
 		if (!Input_IgnoreTimePeriodTypeAndLength.GetYesNo())
 		{
 			CurrentPeriodStartDateTime = sc.GetStartOfPeriodForDateTime(sc.BaseDateTimeIn[BarIndex], Input_TimePeriodType.GetTimePeriodType(), Input_TimePeriodLength.GetInt(), 0);
+		
 			PriorCurrentPeriodStartDateTime = sc.GetStartOfPeriodForDateTime(sc.BaseDateTimeIn[BarIndex - 1], Input_TimePeriodType.GetTimePeriodType(), Input_TimePeriodLength.GetInt(), 0);
 		}
 
@@ -936,6 +937,7 @@ SCSFExport scsf_VolumeWeightedAveragePrice(SCStudyInterfaceRef sc)
 		{
 
 			double PriceVWAPDifferenceSquaredTimesVolume = (static_cast<double>(CurrentPrice) - Subgraph_VWAPSubgraph[BarIndex]) * (static_cast<double>(CurrentPrice) - Subgraph_VWAPSubgraph[BarIndex]) * sc.Volume[BarIndex];
+
 			if (IsStartOfNewPeriod)
 			{
 				Array_BarSumPriceVWAPDifferenceSquaredTimesVolume[BarIndex] = static_cast<float>(PriceVWAPDifferenceSquaredTimesVolume);
@@ -947,14 +949,17 @@ SCSFExport scsf_VolumeWeightedAveragePrice(SCStudyInterfaceRef sc)
 			}
 
 			if (CumulativeVolume != 0)
+			{
 				BandDistance = static_cast<float>(sqrt(Array_BarSumPriceVWAPDifferenceSquaredTimesVolume[BarIndex] / CumulativeVolume));
+			}
 			else
 				BandDistance = 1.0f;
 
 		}
 		else if (Input_BandCalculationMethod.GetIndex() == 2)//VWAP variance//Standard deviation
 		{
-			sc.StdDeviation(Subgraph_VWAPSubgraph, Array_StandardDeviationArray, BarIndex - r_StartIndexOfCurrentPeriod + 1);
+			sc.StdDeviation(Subgraph_VWAPSubgraph, Array_StandardDeviationArray, BarIndex, BarIndex - r_StartIndexOfCurrentPeriod + 1);
+
 			BandDistance = Array_StandardDeviationArray[BarIndex];
 		}
 		else //Percentage
@@ -963,6 +968,7 @@ SCSFExport scsf_VolumeWeightedAveragePrice(SCStudyInterfaceRef sc)
 		}
 
 		Subgraph_SD1Top[BarIndex] = Subgraph_VWAPSubgraph[BarIndex] + Input_Band1OffsetMultiplier.GetFloat() * BandDistance;
+
 		Subgraph_SD1Bottom[BarIndex] = Subgraph_VWAPSubgraph[BarIndex] - Input_Band1OffsetMultiplier.GetFloat() * BandDistance;
 
 		Subgraph_SD2Top[BarIndex] = Subgraph_VWAPSubgraph[BarIndex] + Input_Band2OffsetMultiplier.GetFloat() * BandDistance;
@@ -6224,6 +6230,7 @@ SCSFExport scsf_RelativeVolumeStandardDeviation(SCStudyInterfaceRef sc)
 		Subgraph_RelVol.DrawStyle = DRAWSTYLE_BAR;
 		Subgraph_RelVol.PrimaryColor = RGB(0, 255, 0);
 		Subgraph_RelVol.SecondaryColor = RGB(255, 0, 0);
+		Subgraph_RelVol.SecondaryColorUsed = true;
 
 		Input_Length.Name = "Length";
 		Input_Length.SetInt(60);
@@ -6295,6 +6302,7 @@ SCSFExport scsf_FreedomOfMovement(SCStudyInterfaceRef sc)
 		Subgraph_FOM.DrawStyle = DRAWSTYLE_BAR;
 		Subgraph_FOM.PrimaryColor = RGB(0, 255, 0);
 		Subgraph_FOM.SecondaryColor = RGB(255, 0, 0);
+		Subgraph_FOM.SecondaryColorUsed = true;
 
 		Input_InputData.Name = "Input Data";
 		Input_InputData.SetInputDataIndex(SC_LAST);

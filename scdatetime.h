@@ -1081,6 +1081,10 @@ class SCDateTime
 		bool operator > (const SCDateTime& DateTime) const;
 		bool operator >= (const SCDateTime& DateTime) const;
 
+		#ifdef SCDATETIME_SUPPORT_CHRONO
+		operator std::chrono::system_clock::time_point() const;
+		#endif
+
 		void Clear();
 		void SetToMaximum();
 		bool IsMaximum() const;
@@ -1177,6 +1181,7 @@ class SCDateTime
 		SCDateTime& SetDate(int Date);
 		SCDateTime& SetDate(const SCDateTime& Date);
 		SCDateTime& SetTime(int Time);
+		SCDateTime& SetTimeToMaximum();
 		SCDateTime& SetTimeFromSCDateTime(const SCDateTime& Time);
 		SCDateTime& SetDateYMD(int Year, int Month, int Day);
 		SCDateTime& SetTimeHMS(int Hour, int Minute, int Second);
@@ -1570,6 +1575,14 @@ inline bool SCDateTime::operator >= (const SCDateTime& DateTime) const
 {
 	return !this->operator <(DateTime);
 }
+
+#ifdef SCDATETIME_SUPPORT_CHRONO
+/*==========================================================================*/
+inline SCDateTime::operator std::chrono::system_clock::time_point() const
+{
+	return (SCDATETIME_EPOCH_SYSTEM_CLOCK + std::chrono::microseconds(m_dt));
+}
+#endif
 
 /*==========================================================================*/
 inline void SCDateTime::Clear()
@@ -2165,9 +2178,20 @@ inline SCDateTime& SCDateTime::SetDate(const SCDateTime& Date)
 }
 
 /*==========================================================================*/
+// Time is in seconds.
 inline SCDateTime& SCDateTime::SetTime(int Time)
 {
 	m_dt += Time * MICROSECONDS_PER_SECOND - m_dt % MICROSECONDS_PER_DAY;
+	return *this;
+}
+
+/*==========================================================================*/
+inline SCDateTime& SCDateTime::SetTimeToMaximum()
+{
+	SetTime(0);
+	
+	m_dt += MICROSECONDS_PER_DAY - 1;
+
 	return *this;
 }
 
