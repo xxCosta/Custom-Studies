@@ -1,6 +1,7 @@
 *.h
 *.cpp
 !replay_manager.cpp
+!keyboardCodeFinder.cpp
 *.txt
 
 
