@@ -1,1 +1,6 @@
+*.h
+*.cpp
 !replay_manager.cpp
+*.txt
+
+
