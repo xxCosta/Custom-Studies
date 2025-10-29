@@ -1,107 +1,113 @@
-// The top of every source code file must include this line
 #include "sierrachart.h"
 #include <string>
-// For reference, refer to this page:
-// https://www.sierrachart.com/index.php?page=doc/AdvancedCustomStudyInterfaceAndLanguage.php
+#include <chrono>
 
-// This line is required. Change the text within the quote
-// marks to what you want to name your group of custom studies. 
 SCDLLName("replay-manager")
 
-//This is the basic framework of a study function. Change the name 'TemplateFunction' to what you require.
 SCSFExport scsf_ToggleJump(SCStudyInterfaceRef sc)
 {
-    SCString msg;
-    SCDateTime replayDate;
     int chartNum = sc.ChartNumber;
     static int speed = 4;
-	
-    if (sc.SetDefaults)
-	{
-		sc.GraphName = "replay manager";		
-		sc.AutoLoop = 0;  //Automatic looping is enabled. 
-        sc.ReceiveKeyboardKeyEvents = 1; // calls this study function everytime a key is pressed
-        sc.SupportKeyboardModifierStates = 1; 
- return;
-	}
-    
-    int keyboardCode= sc.KeyboardKeyEventCode ;
-    // msg.Format("%d", keyboardCode);
-    // sc.AddMessageToLog(msg, 1);
-    
 
-    if (keyboardCode == 68 && sc.IsKeyPressed_Shift == 1){
-        sc.AddMessageToLog("hello",1);
+    static bool fastForwardActive = false;
+    static int fastSpeed = 0;
+    static std::chrono::steady_clock::time_point fastForwardStartTime;
+    static bool commandRun = false;
+
+    if (sc.SetDefaults)
+    {
+        sc.GraphName = "Replay Manager";
+        sc.AutoLoop = 0;  
+        sc.ReceiveKeyboardKeyEvents = 1; 
+        sc.SupportKeyboardModifierStates = 1;
+        return;
     }
 
-    if (keyboardCode == 68){ 
-        //	CLICK THE D KEY TO 
-        //	INITIALIZE or START/STOP TOGGLE
+    int keyboardCode = sc.KeyboardKeyEventCode;
+
+    // D key logic: init/start/pause/resume replay
+    if (keyboardCode == 68)
+    { 
         int replayStatus = sc.GetReplayStatusFromChart(chartNum);
-        if (replayStatus == 0){ 
-	        replayDate.SetDateTimeYMDHMS(2023,10,30,0,0,0);
-	        sc.StartChartReplay(chartNum, 4, replayDate);
-	        sc.ResumeChartReplay(chartNum); 
-        }
-        if (replayStatus == 2){
+
+        if (replayStatus == 0) 
+        {
+            SCDateTime replayDate;
+            replayDate.SetDateTimeYMDHMS(2023, 10, 30, 0, 0, 0);
+
+            n_ACSIL::s_ChartReplayParameters replayParams;
+            replayParams.ChartNumber = chartNum;
+            replayParams.ReplaySpeed = 4;
+            replayParams.StartDateTime = replayDate;
+
+            sc.StartChartReplayNew(replayParams);
             sc.ResumeChartReplay(chartNum);
         }
-        if (replayStatus == 1){
+        else if (replayStatus == 2)
+        {
+            sc.ResumeChartReplay(chartNum);
+        }
+        else if (replayStatus == 1)
+        {
             sc.PauseChartReplay(chartNum);
         }
     }
 
-    if (keyboardCode == 69){
-        //  CLICK THE E KEY TO
-        //  FAST FORWARD TO NEXT SESSION
+    // === E key: fast forward to next session in ~2 seconds ===
+    if (keyboardCode == 69 && !fastForwardActive)
+    {
         SCDateTime currentReplayTime = sc.LatestDateTimeForLastBar;
+
+        // Calculate hours until next session (e.g., 20:00)
         int hour = currentReplayTime.GetHour();
         int hoursTillNextSession = 20 - hour;
-        currentReplayTime += SCDateTime::HOURS(hoursTillNextSession);
+        if (hoursTillNextSession <= 0)
+            hoursTillNextSession += 24;
 
-        //STOPED HERE. NEXT STEP IS TO MAKE A TIMER REFER TO CHATGPT IF YOU FORGET
-        
-        sc.StartChartReplay(chartNum,3,currentReplayTime);
-        SCString debug;                  
-        debug.Format("%d",hour);
-        sc.AddMessageToLog(debug,1);
+        SCDateTime nextSessionTime = currentReplayTime + SCDateTime::HOURS(hoursTillNextSession);
+
+        // Calculate difference in seconds
+        double secondsToNextSession = (nextSessionTime - currentReplayTime).GetAsDouble() * 24.0 * 60.0 * 60.0;
+
+        // Determine fast speed to reach next session in ~2 seconds
+        fastSpeed = (int)(secondsToNextSession / 2.0);
+        if (fastSpeed < 100) fastSpeed = 100;
+
+        // Start fast forward
+        sc.ResumeChartReplay(chartNum);
+        sc.ChangeChartReplaySpeed(chartNum, fastSpeed);
+
+        // Mark as active and store start time
+        fastForwardActive = true;
+        fastForwardStartTime = std::chrono::steady_clock::now();
+        commandRun = false;
     }
 
-    if (keyboardCode == 70) {
-        //  CLICK THE F KEY TO
-        //  TOGGLE FAST FORWARD
-        if (speed == 4000){
-            speed = 4;
-        }else{
-            speed = 4000;
+    // === AutoLoop section to run 2-second action ===
+    if (fastForwardActive)
+    {
+        auto now = std::chrono::steady_clock::now();
+        double elapsedSeconds = std::chrono::duration_cast<std::chrono::milliseconds>(now - fastForwardStartTime).count() / 1000.0;
+
+        if (elapsedSeconds < 2.0)
+        {
+            // During the 2 seconds, you can do something repeatedly
+            sc.AddMessageToLog("Fast forwarding...", 0);
         }
-        sc.ChangeChartReplaySpeed(chartNum,speed);
+        else if (!commandRun)
+        {
+            // After 2 seconds, reset speed to normal
+            sc.ChangeChartReplaySpeed(chartNum, 4);
+            fastForwardActive = false;
+            commandRun = true;
+            sc.AddMessageToLog("2 seconds elapsed, replay speed reset.", 0);
+        }
     }
-        //SCString debug;                  
-        //debug.Format("%d",replayDate);
-        //sc.AddMessageToLog(debug,1);
-}
 
-
-SCSFExport scsf_KeyboardCodeFinder(SCStudyInterfaceRef sc)
-{
-	if (sc.SetDefaults)
-	{
-		sc.GraphName = "Keyboard Code Finder";
-        sc.ReceiveKeyboardKeyEvents = 1; // calls this study function everytime a key is pressed
-		sc.AutoLoop = 0;  //Automatic looping is enabled. 
-		
-		sc.Subgraph[0].Name = "Keyboard Code Finder";	
-		return;
-	}
-	
-    if (sc.KeyboardKeyEventCode != 0 ){ // != 0 to prevent constant logging
-        SCString msg;
-        int keyboardCode = sc.KeyboardKeyEventCode;
-        msg.Format("%d", keyboardCode);
-        sc.AddMessageToLog(msg, 1);
-
-        sc.KeyboardKeyEventCode = 0;
-    } 
-	
+    // F key logic: toggle replay speed
+    if (keyboardCode == 70)
+    {
+        speed = (speed == 4000) ? 4 : 4000;
+        sc.ChangeChartReplaySpeed(chartNum, speed);
+    }
 }
