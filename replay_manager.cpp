@@ -54,54 +54,19 @@ SCSFExport scsf_ToggleJump(SCStudyInterfaceRef sc)
     }
 
     // === E key: fast forward to next session in ~2 seconds ===
-    if (keyboardCode == 69 && !fastForwardActive)
+    if (keyboardCode == 69) //&& !fastForwardActive)
     {
-        SCDateTime currentReplayTime = sc.LatestDateTimeForLastBar;
+        // i'll need to get the current bar time first
+        SCDateTime latestBarTime = sc.LatestDateTimeForLastBar;
+        SCString debug = sc.DateTimeToString(latestBarTime, FLAG_DT_HOUR); 
+        sc.AddMessageToLog(debug, 0);
+        //next i'll need to find out how much time till the next session
+        int goalTime = 20;
+        int hoursTilNextSesh = goalTime - latestBarTime;
+        //figure out replay speed
+        int secondsTilNextSesh = hoursTilNextSesh * 3600; 
 
-        // Calculate hours until next session (e.g., 20:00)
-        int hour = currentReplayTime.GetHour();
-        int hoursTillNextSession = 20 - hour;
-        if (hoursTillNextSession <= 0)
-            hoursTillNextSession += 24;
 
-        SCDateTime nextSessionTime = currentReplayTime + SCDateTime::HOURS(hoursTillNextSession);
-
-        // Calculate difference in seconds
-        double secondsToNextSession = (nextSessionTime - currentReplayTime).GetAsDouble() * 24.0 * 60.0 * 60.0;
-
-        // Determine fast speed to reach next session in ~2 seconds
-        fastSpeed = (int)(secondsToNextSession / 2.0);
-        if (fastSpeed < 100) fastSpeed = 100;
-
-        // Start fast forward
-        sc.ResumeChartReplay(chartNum);
-        sc.ChangeChartReplaySpeed(chartNum, fastSpeed);
-
-        // Mark as active and store start time
-        fastForwardActive = true;
-        fastForwardStartTime = std::chrono::steady_clock::now();
-        commandRun = false;
-    }
-
-    // === AutoLoop section to run 2-second action ===
-    if (fastForwardActive)
-    {
-        auto now = std::chrono::steady_clock::now();
-        double elapsedSeconds = std::chrono::duration_cast<std::chrono::milliseconds>(now - fastForwardStartTime).count() / 1000.0;
-
-        if (elapsedSeconds < 2.0)
-        {
-            // During the 2 seconds, you can do something repeatedly
-            sc.AddMessageToLog("Fast forwarding...", 0);
-        }
-        else if (!commandRun)
-        {
-            // After 2 seconds, reset speed to normal
-            sc.ChangeChartReplaySpeed(chartNum, 4);
-            fastForwardActive = false;
-            commandRun = true;
-            sc.AddMessageToLog("2 seconds elapsed, replay speed reset.", 0);
-        }
     }
 
     // F key logic: toggle replay speed
