@@ -58,13 +58,27 @@ SCSFExport scsf_ToggleJump(SCStudyInterfaceRef sc)
     {
         // i'll need to get the current bar time first
         SCDateTime latestBarTime = sc.LatestDateTimeForLastBar;
-        SCString debug = sc.DateTimeToString(latestBarTime, FLAG_DT_HOUR); 
-        sc.AddMessageToLog(debug, 0);
+        SCString stringConvertedLatestBarTime = sc.DateTimeToString(latestBarTime, FLAG_DT_HOUR); 
+        sc.AddMessageToLog(stringConvertedLatestBarTime, 0);
         //next i'll need to find out how much time till the next session
-        int goalTime = 20;
-        int hoursTilNextSesh = goalTime - latestBarTime;
+        int currentTimeInHour = latestBarTime.GetHour();
+        int goalTime = 20; 
+        //c_str makes it so sierra chart can read the string, just using std 
+        //will no work because sierra chart expects a const char
+        SCString stringConvertedCurrentTimeInHours = std::to_string(currentTimeInHour).c_str();
+        //sc.AddMessageToLog(stringConvertedCurrentTimeInHours, 0 );
+        
+        //when you subtract 20 from your current time it'll give you the 
+        //amount of hours till 8 of the next day. 
+        //now i need to figure out how to make this formula work
+        int hoursTilNextSesh = (goalTime - currentTimeInHour) + 24;
+        SCString stringHoursTillNextSesh = std::to_string(hoursTilNextSesh).c_str();
+        sc.AddMessageToLog(stringHoursTillNextSesh,0);
         //figure out replay speed
-        int secondsTilNextSesh = hoursTilNextSesh * 3600; 
+        
+        //int secondsTilNextSesh = hoursTilNextSesh * 3600; 
+        //SCString logSecondsTilNextSesh = secondsTilNextSesh;
+        //sc.AddMessageToLog(logSecondsTilNextSesh, 0);
 
 
     }
