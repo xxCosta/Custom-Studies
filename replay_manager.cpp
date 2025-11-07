@@ -17,7 +17,8 @@ SCSFExport scsf_ToggleJump(SCStudyInterfaceRef sc)
     if (sc.SetDefaults)
     {
         sc.GraphName = "Replay Manager";
-        sc.AutoLoop = 0;  
+        sc.AutoLoop = 0;
+        sc.UpdateAlways = 1;
         sc.ReceiveKeyboardKeyEvents = 1; 
         sc.SupportKeyboardModifierStates = 1;
         return;
@@ -54,6 +55,9 @@ SCSFExport scsf_ToggleJump(SCStudyInterfaceRef sc)
     }
 
     // === E key: fast forward to next session in ~2 seconds ===
+     
+    static SCDateTime repeatUntil2SecondsLater;
+    
     if (keyboardCode == 69) //&& !fastForwardActive)
     {
         // i'll need to get the current bar time first
@@ -66,21 +70,20 @@ SCSFExport scsf_ToggleJump(SCStudyInterfaceRef sc)
         //c_str makes it so sierra chart can read the string, just using std 
         //will no work because sierra chart expects a const char
         SCString stringConvertedCurrentTimeInHours = std::to_string(currentTimeInHour).c_str();
-        //sc.AddMessageToLog(stringConvertedCurrentTimeInHours, 0 );
-        
-        //when you subtract 20 from your current time it'll give you the 
-        //amount of hours till 8 of the next day. 
-        //now i need to figure out how to make this formula work
         int hoursTilNextSesh = (goalTime - currentTimeInHour) + 24;
-        SCString stringHoursTillNextSesh = std::to_string(hoursTilNextSesh).c_str();
-        sc.AddMessageToLog(stringHoursTillNextSesh,0);
-        //figure out replay speed
+        int secondsTilNextSesh = hoursTilNextSesh * 3600; 
+    
+
+        repeatUntil2SecondsLater = sc.CurrentSystemDateTime.AddSeconds(2);
+
+        //              SETTING UP REPLAY
+        sc.AddMessageToLog(sc.TimeToString(sc.CurrentSystemDateTime), 0);
+        sc.AddMessageToLog(sc.TimeToString(repeatUntil2SecondsLater), 0);
         
-        //int secondsTilNextSesh = hoursTilNextSesh * 3600; 
-        //SCString logSecondsTilNextSesh = secondsTilNextSesh;
-        //sc.AddMessageToLog(logSecondsTilNextSesh, 0);
+    }
+    if(sc.CurrentSystemDateTime <= repeatUntil2SecondsLater){
 
-
+        sc.AddMessageToLog("hello",0);
     }
 
     // F key logic: toggle replay speed
