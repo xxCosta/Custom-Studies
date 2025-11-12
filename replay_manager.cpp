@@ -8,11 +8,9 @@ SCSFExport scsf_ToggleJump(SCStudyInterfaceRef sc)
 {
     int chartNum = sc.ChartNumber;
     static int speed = 4;
-
     static bool fastForwardActive = false;
+    static int replaySpeedPerSecond = 0;
     static int fastSpeed = 0;
-    static std::chrono::steady_clock::time_point fastForwardStartTime;
-    static bool commandRun = false;
 
     if (sc.SetDefaults)
     {
@@ -60,30 +58,33 @@ SCSFExport scsf_ToggleJump(SCStudyInterfaceRef sc)
     
     if (keyboardCode == 69) //&& !fastForwardActive)
     {
-        // i'll need to get the current bar time first
         SCDateTime latestBarTime = sc.LatestDateTimeForLastBar;
         SCString stringConvertedLatestBarTime = sc.DateTimeToString(latestBarTime, FLAG_DT_HOUR); 
         sc.AddMessageToLog(stringConvertedLatestBarTime, 0);
-        //next i'll need to find out how much time till the next session
         int currentTimeInHour = latestBarTime.GetHour();
         int goalTime = 20; 
-        //c_str makes it so sierra chart can read the string, just using std 
-        //will no work because sierra chart expects a const char
-        SCString stringConvertedCurrentTimeInHours = std::to_string(currentTimeInHour).c_str();
         int hoursTilNextSesh = (goalTime - currentTimeInHour) + 24;
-        int secondsTilNextSesh = hoursTilNextSesh * 3600; 
-    
+        int secondsTilNextSesh = hoursTilNextSesh * 3600;
+        replaySpeedPerSecond = secondsTilNextSesh/2;
+        // dont delete the log, it's a good example of a one line log for numbers
+        sc.AddMessageToLog(SCString().Format("%d",replaySpeedPerSecond),0);
 
         repeatUntil2SecondsLater = sc.CurrentSystemDateTime.AddSeconds(2);
 
-        //              SETTING UP REPLAY
-        sc.AddMessageToLog(sc.TimeToString(sc.CurrentSystemDateTime), 0);
-        sc.AddMessageToLog(sc.TimeToString(repeatUntil2SecondsLater), 0);
-        
     }
-    if(sc.CurrentSystemDateTime <= repeatUntil2SecondsLater){
 
-        sc.AddMessageToLog("hello",0);
+    if(sc.CurrentSystemDateTime < repeatUntil2SecondsLater){
+        if(fastForwardActive == false){
+            fastForwardActive = true;
+            sc.ChangeChartReplaySpeed(chartNum, replaySpeedPerSecond); 
+            sc.AddMessageToLog("started fast forward",0);
+        };
+    }else if(sc.CurrentSystemDateTime == repeatUntil2SecondsLater){
+        if(fastForwardActive == true) {
+            fastForwardActive = false;
+            sc.ChangeChartReplaySpeed(chartNum, 4); 
+            sc.AddMessageToLog("done fast forawrd",0);
+        }
     }
 
     // F key logic: toggle replay speed
