@@ -6,7 +6,8 @@ SCDLLName("replay-manager")
 
 SCSFExport scsf_ToggleJump(SCStudyInterfaceRef sc)
 {
-    int chartNum = sc.ChartNumber;
+    // int chartNum = sc.ChartNumber;
+    int chartNum = 2;
     static int speed = 4;
     static bool fastForwardActive = false;
     static int replaySpeedPerSecond = 0;
@@ -59,11 +60,16 @@ SCSFExport scsf_ToggleJump(SCStudyInterfaceRef sc)
     if (keyboardCode == 69) //&& !fastForwardActive)
     {
         SCDateTime latestBarTime = sc.LatestDateTimeForLastBar;
-        SCString stringConvertedLatestBarTime = sc.DateTimeToString(latestBarTime, FLAG_DT_HOUR); 
-        sc.AddMessageToLog(stringConvertedLatestBarTime, 0);
+        sc.AddMessageToLog(sc.DateTimeToString(latestBarTime, FLAG_DT_HOUR), 0);
         int currentTimeInHour = latestBarTime.GetHour();
         int goalTime = 20; 
-        int hoursTilNextSesh = (goalTime - currentTimeInHour) + 24;
+        int hoursTilNextSesh;
+        if(currentTimeInHour >= goalTime){
+            hoursTilNextSesh = (goalTime - currentTimeInHour) + 24;
+        } else {
+            hoursTilNextSesh = goalTime - currentTimeInHour;    
+        }
+        sc.AddMessageToLog(SCString().Format("%d hrs till next session",hoursTilNextSesh),0);
         int secondsTilNextSesh = hoursTilNextSesh * 3600;
         replaySpeedPerSecond = secondsTilNextSesh/2;
         // dont delete the log, it's a good example of a one line log for numbers
@@ -77,13 +83,15 @@ SCSFExport scsf_ToggleJump(SCStudyInterfaceRef sc)
         if(fastForwardActive == false){
             fastForwardActive = true;
             sc.ChangeChartReplaySpeed(chartNum, replaySpeedPerSecond); 
-            sc.AddMessageToLog("started fast forward",0);
+            // sc.AddMessageToLog("started fast forward",0);
         };
-    }else if(sc.CurrentSystemDateTime == repeatUntil2SecondsLater){
+    }
+
+    if(sc.CurrentSystemDateTime == repeatUntil2SecondsLater){
         if(fastForwardActive == true) {
             fastForwardActive = false;
             sc.ChangeChartReplaySpeed(chartNum, 4); 
-            sc.AddMessageToLog("done fast forawrd",0);
+            // sc.AddMessageToLog("done fast forawrd",0);
         }
     }
 
