@@ -28,16 +28,23 @@ SCSFExport scsf_rectangleBoxEntry(SCStudyInterfaceRef sc)
 
     int chartNum = 2;	
     s_UseTool entryBox;	
+    float& slPriceBottomOfBox = sc.GetPersistentFloat(0);
+    float& entryPriceTopOfBox = sc.GetPersistentFloat(1);
+    float& tpPrice = sc.GetPersistentFloat(2);
+    
+    
 
     if(sc.GetUserDrawnChartDrawing(chartNum, DRAWING_RECTANGLEHIGHLIGHT, entryBox, -1)){
-        float& slPriceBottomOfBox = sc.GetPersistentFloat(0);
-        float& entryPriceTopOfBox = sc.GetPersistentFloat(1);
 
         if(slPriceBottomOfBox != entryBox.BeginValue || entryPriceTopOfBox != entryBox.EndValue ){
             slPriceBottomOfBox = entryBox.BeginValue;
             entryPriceTopOfBox = entryBox.EndValue;
-            sc.AddMessageToLog(SCString().Format("sl  at %.3f", slPriceBottomOfBox),0);
+
+            float tp = ((entryPriceTopOfBox - slPriceBottomOfBox)*rr.GetFloat()) + entryPriceTopOfBox;
+
             sc.AddMessageToLog(SCString().Format("entry at %.3f", entryPriceTopOfBox),0);
+            sc.AddMessageToLog(SCString().Format("tp at%.3f", tp),0);
+            sc.AddMessageToLog(SCString().Format("sl  at %.3f", slPriceBottomOfBox),0);
         }
 
     }
