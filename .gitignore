@@ -2,7 +2,7 @@
 *.cpp
 !replay_manager.cpp
 !keyboardCodeFinder.cpp
-!entryboi.cppp
+!entryboi.cpp
 *.txt
 
 
