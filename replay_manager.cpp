@@ -1,11 +1,14 @@
 #include "sierrachart.h"
-#include <string>
-#include <chrono>
+#include <vector>
+
+
+
 
 SCDLLName("replay-manager")
 
 SCSFExport scsf_ToggleJump(SCStudyInterfaceRef sc)
 {
+    static std::vector<int> chartNums = {2,8}; 
     // int chartNum2 = sc.ChartNumber;
     int chartNum2 = 2;
     int chartNum8 = 8;
@@ -28,29 +31,31 @@ SCSFExport scsf_ToggleJump(SCStudyInterfaceRef sc)
 
     // D key logic: init/start/pause/resume replay
     if (keyboardCode == 68)
-    { 
-        int replayStatus = sc.GetReplayStatusFromChart(chartNum2);
+    {
+        for(int chartNum : chartNums){
+            int replayStatus = sc.GetReplayStatusFromChart(chartNum);
 
-        if (replayStatus == 0) 
-        {
-            SCDateTime replayDate;
-            replayDate.SetDateTimeYMDHMS(2023, 10, 30, 0, 0, 0);
+            if (replayStatus == 0) 
+            {
+                SCDateTime replayDate;
+                replayDate.SetDateTimeYMDHMS(2023, 10, 30, 0, 0, 0);
 
-            n_ACSIL::s_ChartReplayParameters replayParams;
-            replayParams.ChartNumber = chartNum2;
-            replayParams.ReplaySpeed = 4;
-            replayParams.StartDateTime = replayDate;
+                n_ACSIL::s_ChartReplayParameters replayParams;
+                replayParams.ChartNumber = chartNum;
+                replayParams.ReplaySpeed = 4;
+                replayParams.StartDateTime = replayDate;
 
-            sc.StartChartReplayNew(replayParams);
-            sc.ResumeChartReplay(chartNum2);
-        }
-        else if (replayStatus == 2)
-        {
-            sc.ResumeChartReplay(chartNum2);
-        }
-        else if (replayStatus == 1)
-        {
-            sc.PauseChartReplay(chartNum2);
+                sc.StartChartReplayNew(replayParams);
+                sc.ResumeChartReplay(chartNum);
+            }
+            else if (replayStatus == 2)
+            {
+                sc.ResumeChartReplay(chartNum);
+            }
+            else if (replayStatus == 1)
+            {
+                sc.PauseChartReplay(chartNum);
+            }
         }
     }
 
@@ -83,16 +88,17 @@ SCSFExport scsf_ToggleJump(SCStudyInterfaceRef sc)
         futureBarIndex = lastVisibleBarIndex + hoursTilNextSesh;
         sc.AddMessageToLog(SCString().Format("%d", futureBarIndex),0);
         fastForwardActive = true;
-        sc.ChangeChartReplaySpeed(chartNum2, replaySpeedPerSecond); 
-        sc.ChangeChartReplaySpeed(chartNum8, replaySpeedPerSecond); 
-
+        for(int chartNum : chartNums){
+            sc.ChangeChartReplaySpeed(chartNum, replaySpeedPerSecond); 
+        }
     }
 
 
     if(fastForwardActive) {
         if(sc.IndexOfLastVisibleBar >= futureBarIndex){
-        sc.ChangeChartReplaySpeed(chartNum2, 4); 
-        sc.ChangeChartReplaySpeed(chartNum8, 4); 
+            for(int chartNum : chartNums){
+                sc.ChangeChartReplaySpeed(chartNum, 4); 
+            }
         // sc.AddMessageToLog("done fast forawrd",0);
         fastForwardActive = false;
         }
