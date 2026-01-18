@@ -8,7 +8,7 @@ SCDLLName("replay-manager")
 
 SCSFExport scsf_ToggleJump(SCStudyInterfaceRef sc)
 {
-    static std::vector<int> chartNums = {2,8}; 
+    static std::vector<int> chartNums = {2,3,5,6,8}; 
     // int chartNum2 = sc.ChartNumber;
     int chartNum2 = 2;
     int chartNum8 = 8;
@@ -38,7 +38,10 @@ SCSFExport scsf_ToggleJump(SCStudyInterfaceRef sc)
             if (replayStatus == 0) 
             {
                 SCDateTime replayDate;
-                replayDate.SetDateTimeYMDHMS(2023, 10, 30, 0, 0, 0);
+                // reset when starting a new backtest
+                // replayDate.SetDateTimeYMDHMS(2024, 01, 15, 0, 0, 0);
+                
+                replayDate.SetDateTimeYMDHMS(2024, 02, 11, 0, 0, 0);
 
                 n_ACSIL::s_ChartReplayParameters replayParams;
                 replayParams.ChartNumber = chartNum;
@@ -108,7 +111,9 @@ SCSFExport scsf_ToggleJump(SCStudyInterfaceRef sc)
     if (keyboardCode == 70)
     {
         speed = (speed == 4000) ? 4 : 4000;
-        sc.ChangeChartReplaySpeed(chartNum2, speed);
-        sc.ChangeChartReplaySpeed(chartNum8, speed);
+        for(int chartNum : chartNums){
+
+            sc.ChangeChartReplaySpeed(chartNum, speed);
+        }
     }
 }

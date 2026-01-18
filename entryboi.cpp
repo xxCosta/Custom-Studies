@@ -1,14 +1,27 @@
-// The top of every source code file must include this line
+//
+//
+// INSTRUCTIONS:
+// O to open orders
+// C to cancel current orders
+// T to take profit
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
 #include "sierrachart.h"
-
-// For reference, refer to this page:
-// https://www.sierrachart.com/index.php?page=doc/AdvancedCustomStudyInterfaceAndLanguage.php
-
-// This line is required. Change the text within the quote
-// marks to what you want to name your group of custom studies. 
+#include <vector>
 SCDLLName("Entry Boi")
 
-//This is the basic framework of a study function. Change the name 'TemplateFunction' to what you require.
 SCSFExport scsf_rectangleBoxEntry(SCStudyInterfaceRef sc)
 {
 
@@ -16,21 +29,17 @@ SCSFExport scsf_rectangleBoxEntry(SCStudyInterfaceRef sc)
     rr.Name = "risk:reward ratio";
     rr.SetFloat(1);
     
-    // SETTING TRADE MODE
-    SCInputRef isTradeModeActive = sc.Input[1];
-    isTradeModeActive.Name = "Trade Mode Active?";
-    isTradeModeActive.SetYesNo(1);
-    bool tradeMode = isTradeModeActive.GetBoolean();
-
 	// Section 1 - Set the configuration variables and defaults
 	if (sc.SetDefaults)
 	{
 		sc.GraphName = "Entry Boi - S&D Entry";
         sc.UpdateAlways = 1;
 		sc.AutoLoop = 1; 
-		sc.HideStudy = 1;	
+		sc.HideStudy = 1;
 		return;
 	}
+    sc.MaximumPositionAllowed = 200;
+    sc.AllowOnlyOneTradePerBar = 0;
 
     int chartNum = 2;	
     s_UseTool entryBox;	
@@ -39,7 +48,6 @@ SCSFExport scsf_rectangleBoxEntry(SCStudyInterfaceRef sc)
     float& tpPrice = sc.GetPersistentFloat(2);
     
     
-
     if(sc.GetUserDrawnChartDrawing(chartNum, DRAWING_RECTANGLEHIGHLIGHT, entryBox, -1)){
 
         if(slPrice != entryBox.BeginValue || entryPrice != entryBox.EndValue ){
@@ -49,41 +57,52 @@ SCSFExport scsf_rectangleBoxEntry(SCStudyInterfaceRef sc)
             float tp = ((entryPrice - slPrice)*rr.GetFloat()) + entryPrice;
             tpPrice = tp; 
 
-            sc.AddMessageToLog(SCString().Format("entry at %.3f", entryPrice),0);
-            sc.AddMessageToLog(SCString().Format("tp at%.3f", tp),0);
-            sc.AddMessageToLog(SCString().Format("sl  at %.3f", slPrice),0);
+            sc.AddMessageToLog(SCString().Format("entry at %.3f\ntp at %.3f\nsl at %.3f", entryPrice,tp,slPrice),0);
+            // sc.AddMessageToLog(SCString().Format("tp at%.3f", tp),0);
+            // sc.AddMessageToLog(SCString().Format("sl  at %.3f", slPrice),0);
         }
 
         // ORDER STUFF
         int& entryOrderID = sc.GetPersistentInt(0);
         s_SCNewOrder entryOrder;
-        entryOrder.OrderQuantity = 1;
-        entryOrder.OrderType = SCT_ORDERTYPE_LIMIT;
-        entryOrder.Price1 = entryPrice;
+        entryOrder.OrderQuantity = 100;
+        entryOrder.OrderType = SCT_ORDERTYPE_TRIGGERED_STOP;
         entryOrder.TimeInForce = SCT_TIF_GOOD_TILL_CANCELED;
-        s_SCNewOrder stopOrder;
-        s_SCNewOrder tpOrder;
+        entryOrder.AttachedOrderStop1Type = SCT_ORDERTYPE_STOP;
+        entryOrder.Stop1Price = slPrice;
+        entryOrder.AttachedOrderTarget1Type = SCT_ORDERTYPE_LIMIT;
+        entryOrder.Target1Price = tpPrice;
 
-        // RUN DAT CRODIE
-        if(tradeMode){
+        if(sc.GetCustomStudyControlBarButtonEnableState(1)){
             if(tpPrice>slPrice){
-                if(entryOrderID <= 0){
-                    int orderPlaced = sc.BuyEntry(entryOrder);
-                    entryOrderID = orderPlaced;
-                }
+                sc.SetAttachedOrders(entryOrder);
+
+                entryOrder.Price1 = entryPrice + 0.040; //40 pips up from the edge of my zone, probs gonna play with this a lot
+                entryOrder.Price2 = entryPrice - 0.080; //this will just line it up in a good spot, ill drag this to liking
+
+                int orderPlaced = sc.BuyEntry(entryOrder);
+                sc.AddMessageToLog(sc.GetTradingErrorTextMessage(orderPlaced),0);
+                entryOrderID = orderPlaced;
             }else {
 
-                if(entryOrderID <= 0){
-                    int orderPlaced = sc.SellEntry(entryOrder);
-                    entryOrderID = orderPlaced;
-                }
-
-
-
-
+                sc.SetAttachedOrders(entryOrder);
+                entryOrder.Price1 = entryPrice - 0.040; //40 pips up from the edge of my zone, probs gonna play with this a lot
+                entryOrder.Price2 = entryPrice + 0.080; //this will just line it up in a good spot, ill drag this to liking
+                int orderPlaced = sc.SellEntry(entryOrder);
+                entryOrderID = orderPlaced;
             }
         }
+        
+        //when a button is pressed its just a toggle
+        //this ensures that it acts as a click rather than a toggle,
+        //allowing me to fire things once through the button
+        std::vector<int> vbuttons = {1,2};
+        for (int x : vbuttons){
+            if(sc.GetCustomStudyControlBarButtonEnableState(x) == 1){
+                sc.SetCustomStudyControlBarButtonEnable(x,0);
+            }
 
+        }
     }
 
 
