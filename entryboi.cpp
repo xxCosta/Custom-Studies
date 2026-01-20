@@ -22,13 +22,14 @@
 #include <vector>
 SCDLLName("Entry Boi")
 
+
 SCSFExport scsf_rectangleBoxEntry(SCStudyInterfaceRef sc)
 {
 
     SCInputRef rr = sc.Input[0];
     rr.Name = "risk:reward ratio";
     rr.SetFloat(1);
-    
+
 	// Section 1 - Set the configuration variables and defaults
 	if (sc.SetDefaults)
 	{
@@ -74,20 +75,23 @@ SCSFExport scsf_rectangleBoxEntry(SCStudyInterfaceRef sc)
         entryOrder.Target1Price = tpPrice;
 
         if(sc.GetCustomStudyControlBarButtonEnableState(1)){
+            double triggerPercentage = 0.30; //how deep is it gonna retrace (TODO: set this number to a user input) 
+            double safeEntryPercentage = 0.10;
+            float triggerPrice = entryPrice - triggerPercentage * (entryPrice - slPrice); //refer to math stuff in your journal for an explantion on this formula               
+            float safeEntryPriceAfterTrigHit = entryPrice + safeEntryPercentage * (tpPrice - entryPrice);  
+            entryOrder.Price1 = safeEntryPriceAfterTrigHit; 
+            entryOrder.Price2 = triggerPrice; 
+
+
             if(tpPrice>slPrice){
                 sc.SetAttachedOrders(entryOrder);
-
-                entryOrder.Price1 = entryPrice + 0.040; //40 pips up from the edge of my zone, probs gonna play with this a lot
-                entryOrder.Price2 = entryPrice - 0.080; //this will just line it up in a good spot, ill drag this to liking
-
+                
                 int orderPlaced = sc.BuyEntry(entryOrder);
                 sc.AddMessageToLog(sc.GetTradingErrorTextMessage(orderPlaced),0);
                 entryOrderID = orderPlaced;
             }else {
-
                 sc.SetAttachedOrders(entryOrder);
-                entryOrder.Price1 = entryPrice - 0.040; //40 pips up from the edge of my zone, probs gonna play with this a lot
-                entryOrder.Price2 = entryPrice + 0.080; //this will just line it up in a good spot, ill drag this to liking
+
                 int orderPlaced = sc.SellEntry(entryOrder);
                 entryOrderID = orderPlaced;
             }
@@ -96,8 +100,8 @@ SCSFExport scsf_rectangleBoxEntry(SCStudyInterfaceRef sc)
         //when a button is pressed its just a toggle
         //this ensures that it acts as a click rather than a toggle,
         //allowing me to fire things once through the button
-        std::vector<int> vbuttons = {1,2};
-        for (int x : vbuttons){
+        std::vector<int> vGuiButtons = {1,2};
+        for (int x : vGuiButtons){
             if(sc.GetCustomStudyControlBarButtonEnableState(x) == 1){
                 sc.SetCustomStudyControlBarButtonEnable(x,0);
             }
