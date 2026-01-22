@@ -1,0 +1,16 @@
+CompileFlags:
+  Add: [
+    "-std=c++17",
+    "-fms-extensions",
+    "-fdeclspec",
+    "--target=x86_64-w64-mingw32",
+    "--driver-mode=g++",
+    "-I/mnt/c/SierraChart",
+    "-I/mnt/c/SierraChart/ACS_Source",
+    # I had to use mingw-32 headers to fix my issue with getting windows
+    # headers such as sierrachart.h and the stock std library.
+    "-I/usr/x86_64-w64-mingw32/include",
+    "-I/usr/x86_64-w64-mingw32/include/c++",
+    "-I/usr/x86_64-w64-mingw32/include/c++/x86_64-w64-mingw32"
+  ]
+
