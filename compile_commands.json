@@ -1,0 +1,8 @@
+[
+  {
+    "directory": "/mnt/c/SierraChart/ACS_Source",
+    "file": "entryboi.cpp",
+    "command": "clang++ -std=c++17 -fms-extensions -I/mnt/c/SierraChart -I/mnt/c/SierraChart/ACS_Source"
+  }
+]
+
