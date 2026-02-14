@@ -24,134 +24,146 @@
 #include <utility>
 SCDLLName("Entry Boi")
 
-void orientateOrder(float& sl, float& tp, float& trig, float& safeEntry, float& entry, SCInputRef rr){
-    std::swap(sl,entry);
 
-            float tpBeforeSafeEntry = ((entry - sl)*rr.GetFloat()) + entry;
+struct Order {
+  float slPrice;
+  float entryPrice;
+  float tpPrice;
+  float triggerPrice;
+  float safeEntryPriceAfterTrigHit;
+  int entryOrderID;
+};
 
-            double triggerPercentage = 0.30; //how deep is it gonna retrace (TODO: set this number to a user input) 
-            double safeEntryPercentage = 0.10;
-            trig = entry - triggerPercentage * (entry - sl); //refer to math stuff in your journal for an explantion on this formula               
-            safeEntry = entry + safeEntryPercentage * (tpBeforeSafeEntry - entry);
 
-            float tpAfterSafeEntry = ((safeEntry - sl)*rr.GetFloat()) + safeEntry;//i want to tp to be calculated based on the safe entry not the edge of box,i'll have to recalculate
-            tp = tpAfterSafeEntry; 
+s_SCNewOrder buildOrder(Order* o ){
+
+  s_SCNewOrder newOrder = s_SCNewOrder();
+
+  newOrder.OrderQuantity = 100;
+  newOrder.OrderType = SCT_ORDERTYPE_TRIGGERED_STOP;
+  newOrder.TimeInForce = SCT_TIF_GOOD_TILL_CANCELED;
+  newOrder.AttachedOrderStop1Type = SCT_ORDERTYPE_STOP;
+  newOrder.Stop1Price = o->slPrice;
+  newOrder.AttachedOrderTarget1Type = SCT_ORDERTYPE_LIMIT;
+  newOrder.Target1Price = o->tpPrice;
+  newOrder.Price1 = o->safeEntryPriceAfterTrigHit; 
+  newOrder.Price2 = o->triggerPrice; 
+
+  return newOrder;
+
+};
+
+void orientateOrder(Order* o, SCInputRef rr){
+  std::swap(o->slPrice,o->entryPrice);
+
+  float tpBeforeSafeEntry = ((o->entryPrice - o->slPrice)*rr.GetFloat()) + o->entryPrice;
+
+  double triggerPercentage = 0.30; //how deep is it gonna retrace (TODO: set this number to a user input) 
+  double safeEntryPercentage = 0.10;
+  o->triggerPrice = o->entryPrice - triggerPercentage * (o->entryPrice - o->slPrice); //refer to math stuff in your journal for an explantion on this formula               
+  o->safeEntryPriceAfterTrigHit = o->entryPrice + safeEntryPercentage * (tpBeforeSafeEntry - o->entryPrice);
+
+  float tpAfterSafeEntry = ((o->safeEntryPriceAfterTrigHit - o->slPrice)*rr.GetFloat()) + o->safeEntryPriceAfterTrigHit;//i want to tp to be calculated based on the safe o->entryPrice not the edge of box,i'll have to recalculate
+  o->tpPrice = tpAfterSafeEntry; 
 }
+
+
 
 SCSFExport scsf_rectangleBoxEntry(SCStudyInterfaceRef sc)
 {
 
 
-    SCInputRef rr = sc.Input[0];
-	// Section 1 - Set the configuration variables and defaults
-	if (sc.SetDefaults)
-	{
-		sc.GraphName = "Entry Boi - S&D Entry";
-        sc.UpdateAlways = 1;
-		sc.AutoLoop = 1; 
-		sc.HideStudy = 1;
+  SCInputRef rr = sc.Input[0];
+  // Section 1 - Set the configuration variables and defaults
+  if (sc.SetDefaults)
+  {
+    sc.GraphName = "Entry Boi - S&D Entry";
+    sc.UpdateAlways = 1;
+    sc.AutoLoop = 1; 
+    sc.HideStudy = 1;
 
-        rr.Name = "risk:reward ratio";
-        rr.SetFloat(1.5f);
-		return;
-	}
-    sc.MaximumPositionAllowed = 200;
-    sc.AllowOnlyOneTradePerBar = 0;
+    rr.Name = "risk:reward ratio";
+    rr.SetFloat(1.5f);
+    return;
+  }
 
-    int chartNum = 2;	
-    s_UseTool entryBox;	
-    float& slPrice = sc.GetPersistentFloat(0);
-    float& entryPrice = sc.GetPersistentFloat(1);
-    float& tpPrice = sc.GetPersistentFloat(2);
-    float& triggerPrice = sc.GetPersistentFloat(3);
-    float& safeEntryPriceAfterTrigHit = sc.GetPersistentFloat(4);
-    
-    if(sc.GetUserDrawnChartDrawing(chartNum, DRAWING_RECTANGLEHIGHLIGHT, entryBox, -1)){
+  sc.CancelAllWorkingOrdersOnExit = 1;
+  sc.AllowMultipleEntriesInSameDirection = 1;
+  sc.MaximumPositionAllowed = 200;
+  sc.AllowOnlyOneTradePerBar = 0;
 
-        if(slPrice != entryBox.BeginValue || entryPrice != entryBox.EndValue ){
-            slPrice = entryBox.BeginValue;
-            entryPrice = entryBox.EndValue;
+  int chartNum = sc.ChartNumber;	
+  s_UseTool entryBox;	
 
-            float tpBeforeSafeEntry = ((entryPrice - slPrice)*rr.GetFloat()) + entryPrice;
+  Order* entryOrder = (Order*)sc.GetPersistentPointer(0);
+  if(entryOrder == nullptr){
 
-            double triggerPercentage = 0.30; //how deep is it gonna retrace (TODO: set this number to a user input) 
-            double safeEntryPercentage = 0.10;
-            triggerPrice = entryPrice - triggerPercentage * (entryPrice - slPrice); //refer to math stuff in your journal for an explantion on this formula               
-            safeEntryPriceAfterTrigHit = entryPrice + safeEntryPercentage * (tpBeforeSafeEntry - entryPrice);
+    entryOrder = new Order;
+    sc.SetPersistentPointer(0, entryOrder);
+  }
+  
+  if(sc.GetUserDrawnChartDrawing(chartNum, DRAWING_RECTANGLEHIGHLIGHT, entryBox, -1)){
+    if(entryOrder->slPrice != entryBox.BeginValue || entryOrder->entryPrice != entryBox.EndValue ){
+      entryOrder->slPrice = entryBox.BeginValue;
+      entryOrder->entryPrice = entryBox.EndValue;
 
-            float tpAfterSafeEntry = ((safeEntryPriceAfterTrigHit - slPrice)*rr.GetFloat()) + safeEntryPriceAfterTrigHit;//i want to tp to be calculated based on the safe entry not the edge of box,i'll have to recalculate
-            tpPrice = tpAfterSafeEntry; 
+      float tpBeforeSafeEntry = ((entryOrder->entryPrice - entryOrder->slPrice)*rr.GetFloat()) + entryOrder->entryPrice;
+
+      double triggerPercentage = 0.30; //how deep is it gonna retrace (TODO: set this number to a user input) 
+      double safeEntryPercentage = 0.10;
+      entryOrder->triggerPrice = entryOrder->entryPrice - triggerPercentage * (entryOrder->entryPrice - entryOrder->slPrice); //refer to math stuff in your journal for an explantion on this formula               
+      entryOrder->safeEntryPriceAfterTrigHit = entryOrder->entryPrice + safeEntryPercentage * (tpBeforeSafeEntry - entryOrder->entryPrice);
+
+      float tpAfterSafeEntry = ((entryOrder->safeEntryPriceAfterTrigHit - entryOrder->slPrice)*rr.GetFloat()) + entryOrder->safeEntryPriceAfterTrigHit;//i want to tp to be calculated based on the safe entry not the edge of box,i'll have to recalculate
+      entryOrder->tpPrice = tpAfterSafeEntry; 
 
 
-            sc.AddMessageToLog(SCString().Format("entry at %.3f", entryPrice),0);
-            sc.AddMessageToLog(SCString().Format("tp at%.3f", tpAfterSafeEntry),0);
-            sc.AddMessageToLog(SCString().Format("tp at%.3f", tpPrice),0);
-            sc.AddMessageToLog(SCString().Format("sl  at %.3f", slPrice),0);
-        }
-
-        // ORDER STUFF
-        int& entryOrderID = sc.GetPersistentInt(0);
-        s_SCNewOrder entryOrder;
-        entryOrder.OrderQuantity = 100;
-        entryOrder.OrderType = SCT_ORDERTYPE_TRIGGERED_STOP;
-        entryOrder.TimeInForce = SCT_TIF_GOOD_TILL_CANCELED;
-        entryOrder.AttachedOrderStop1Type = SCT_ORDERTYPE_STOP;
-        entryOrder.Stop1Price = slPrice;
-        entryOrder.AttachedOrderTarget1Type = SCT_ORDERTYPE_LIMIT;
-        entryOrder.Target1Price = tpPrice;
-        entryOrder.Price1 = safeEntryPriceAfterTrigHit; 
-        entryOrder.Price2 = triggerPrice; 
-
-        
-        //by default, when a button is pressed its just a toggle
-        //this ensures that it acts as a click rather than a toggle,
-        //allowing me to fire things once through the button
-        std::vector<int> vGuiButtons = {1,2};
-        for (int x : vGuiButtons){
-            if(sc.GetCustomStudyControlBarButtonEnableState(x) == 1){
-
-                sc.SetAttachedOrders(entryOrder);
-
-                if(x==1){
-                    if(slPrice>entryPrice){
-                        orientateOrder(slPrice,tpPrice,triggerPrice,safeEntryPriceAfterTrigHit,entryPrice,rr);
-                        sc.AddMessageToLog("swapped",0);
-                        
-                        //i have to rebuild the order after this. I know that my core idea is good but the execution is bad 
-                        //there is no reason i should have to repeat code like this, its really inefficient to read and write
-                        //TODO: rewrite the whole tool in a readable and efficient manner
-                        entryOrder.Stop1Price = slPrice;
-                        entryOrder.Target1Price = tpPrice;
-                        entryOrder.Price1 = safeEntryPriceAfterTrigHit; 
-                        entryOrder.Price2 = triggerPrice; 
-                    }
-                    int orderPlaced = sc.BuyEntry(entryOrder);
-                    sc.AddMessageToLog(sc.GetTradingErrorTextMessage(orderPlaced),0);
-                    entryOrderID = orderPlaced;
-                }else if(x==2) {
-                    if(entryPrice>slPrice){
-                        orientateOrder(slPrice,tpPrice,triggerPrice,safeEntryPriceAfterTrigHit,entryPrice,rr);
-                        sc.AddMessageToLog("swapped",0); 
-                        entryOrder.Stop1Price = slPrice;
-                        entryOrder.Target1Price = tpPrice;
-                        entryOrder.Price1 = safeEntryPriceAfterTrigHit; 
-                        entryOrder.Price2 = triggerPrice; 
-                    }
-                    int orderPlaced = sc.SellEntry(entryOrder);
-                    entryOrderID = orderPlaced;
-                }
-                sc.SetCustomStudyControlBarButtonEnable(x,0);
-            }
-
-        }
+      sc.AddMessageToLog(SCString().Format("entry at %.3f", entryOrder->entryPrice),0);
+      sc.AddMessageToLog(SCString().Format("tp at%.3f", tpAfterSafeEntry),0);
+      sc.AddMessageToLog(SCString().Format("tp at%.3f", entryOrder->tpPrice),0);
+      sc.AddMessageToLog(SCString().Format("sl  at %.3f", entryOrder->slPrice),0);
     }
 
+    //by default, when a button is pressed its just a toggle
+    //this ensures that it acts as a click rather than a toggle,
+    //allowing me to fire things once through the button
+    std::vector<int> vGuiButtons = {1,2};
+    for (int x : vGuiButtons){
+      if(sc.GetCustomStudyControlBarButtonEnableState(x) == 1){
+        if(x==1){
+
+          if(entryOrder->slPrice>entryOrder->entryPrice){
+            orientateOrder(entryOrder, rr);
+            sc.AddMessageToLog("swapped",0); 
+          }
+          
+          s_SCNewOrder newOrder = buildOrder(entryOrder);
+          sc.SetAttachedOrders(newOrder);
+          int orderPlaced = sc.BuyEntry(newOrder);
+          entryOrder->entryOrderID = orderPlaced;
+
+        }else if(x==2) {
+          if(entryOrder->entryPrice>entryOrder->slPrice){
+            orientateOrder(entryOrder, rr);
+            sc.AddMessageToLog("swapped",0); 
+          }
+
+          s_SCNewOrder newOrder = buildOrder(entryOrder);
+          sc.SetAttachedOrders(newOrder);
+          entryOrder->entryOrderID = sc.SellEntry(newOrder);
+        }
+        sc.SetCustomStudyControlBarButtonEnable(x,0);
+      }
+
+    }
+  }
 
 
-    
-    
-    
 
 
-    
+
+
+
+
+
 }
