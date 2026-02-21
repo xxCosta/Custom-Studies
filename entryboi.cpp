@@ -41,7 +41,7 @@ s_SCNewOrder buildOrder(Order* o ){
 
   newOrder.OrderQuantity = 100;
   newOrder.OrderType = SCT_ORDERTYPE_TRIGGERED_STOP;
-  newOrder.TimeInForce = SCT_TIF_GOOD_TILL_CANCELED;
+  newOrder.TimeInForce = SCT_TIF_DAY;
   newOrder.AttachedOrderStop1Type = SCT_ORDERTYPE_STOP;
   newOrder.Stop1Price = o->slPrice;
   newOrder.AttachedOrderTarget1Type = SCT_ORDERTYPE_LIMIT;
@@ -102,6 +102,22 @@ SCSFExport scsf_rectangleBoxEntry(SCStudyInterfaceRef sc)
     sc.SetPersistentPointer(0, entryOrder);
   }
   
+  //i need to wrap this in an if statement so that it only runs on open orders
+  //also needs to be independent per chart so the multiple orders across...
+  //different charts dont affect eachother.  
+    //
+    // double highHardStop = std::fmax(entryOrder->slPrice, entryOrder->safeEntryPriceAfterTrigHit);
+    // double lowHardStop = std::fmin(entryOrder->slPrice, entryOrder->safeEntryPriceAfterTrigHit);
+    // double currentPrice = sc.GetLastPriceForTrading();
+    // double pctHardStop = 0.10;
+    // double hardStop = lowHardStop - pctHardStop*(highHardStop-lowHardStop);
+    // if(currentPrice < hardStop){
+    //   sc.CancelAllOrders();
+    // }
+    //
+
+
+
   if(sc.GetUserDrawnChartDrawing(chartNum, DRAWING_RECTANGLEHIGHLIGHT, entryBox, -1)){
     if(entryOrder->slPrice != entryBox.BeginValue || entryOrder->entryPrice != entryBox.EndValue ){
       entryOrder->slPrice = entryBox.BeginValue;
@@ -110,7 +126,7 @@ SCSFExport scsf_rectangleBoxEntry(SCStudyInterfaceRef sc)
       float tpBeforeSafeEntry = ((entryOrder->entryPrice - entryOrder->slPrice)*rr.GetFloat()) + entryOrder->entryPrice;
 
       double triggerPercentage = 0.30; //how deep is it gonna retrace (TODO: set this number to a user input) 
-      double safeEntryPercentage = 0.10;
+      double safeEntryPercentage = 0.18;
       entryOrder->triggerPrice = entryOrder->entryPrice - triggerPercentage * (entryOrder->entryPrice - entryOrder->slPrice); //refer to math stuff in your journal for an explantion on this formula               
       entryOrder->safeEntryPriceAfterTrigHit = entryOrder->entryPrice + safeEntryPercentage * (tpBeforeSafeEntry - entryOrder->entryPrice);
 
@@ -139,8 +155,7 @@ SCSFExport scsf_rectangleBoxEntry(SCStudyInterfaceRef sc)
           
           s_SCNewOrder newOrder = buildOrder(entryOrder);
           sc.SetAttachedOrders(newOrder);
-          int orderPlaced = sc.BuyEntry(newOrder);
-          entryOrder->entryOrderID = orderPlaced;
+          entryOrder->entryOrderID= sc.BuyEntry(newOrder);
 
         }else if(x==2) {
           if(entryOrder->entryPrice>entryOrder->slPrice){
@@ -156,7 +171,30 @@ SCSFExport scsf_rectangleBoxEntry(SCStudyInterfaceRef sc)
       }
 
     }
+
+    s_SCTradeOrder currentOrder;
+    if(sc.GetOrderByIndex(0,currentOrder)){
+      s_SCTradeOrder slCurrentOrder;
+
+      sc.GetOrderByOrderID(currentOrder.StopChildInternalOrderID, slCurrentOrder);
+      double highHardStop = std::fmax(currentOrder.Price1, slCurrentOrder.Price1);
+      double lowHardStop = std::fmin(currentOrder.Price1, slCurrentOrder.Price1);
+      double currentPrice = sc.GetLastPriceForTrading();
+      double pctHardStop = 0.10;
+      double hardStop = lowHardStop - pctHardStop*(highHardStop-lowHardStop);
+      if(currentPrice < hardStop){
+        sc.CancelAllOrders();
+      }
+
+    }
+
+
+
+
+
+
   }
+
 
 
 
