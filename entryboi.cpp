@@ -53,13 +53,13 @@ s_SCNewOrder buildOrder(Order* o ){
 
 };
 
-void orientateOrder(Order* o, SCInputRef rr){
+void orientateOrder(Order* o, SCInputRef rr, double safeEntryPercentage){
   std::swap(o->slPrice,o->entryPrice);
 
   float tpBeforeSafeEntry = ((o->entryPrice - o->slPrice)*rr.GetFloat()) + o->entryPrice;
 
   double triggerPercentage = 0.30; //how deep is it gonna retrace (TODO: set this number to a user input) 
-  double safeEntryPercentage = 0.10;
+  // double safeEntryPercentage = 0.10;
   o->triggerPrice = o->entryPrice - triggerPercentage * (o->entryPrice - o->slPrice); //refer to math stuff in your journal for an explantion on this formula               
   o->safeEntryPriceAfterTrigHit = o->entryPrice + safeEntryPercentage * (tpBeforeSafeEntry - o->entryPrice);
 
@@ -74,6 +74,7 @@ SCSFExport scsf_rectangleBoxEntry(SCStudyInterfaceRef sc)
 
 
   SCInputRef rr = sc.Input[0];
+  SCInputRef inputSafeEntry = sc.Input[1];
   // Section 1 - Set the configuration variables and defaults
   if (sc.SetDefaults)
   {
@@ -82,10 +83,15 @@ SCSFExport scsf_rectangleBoxEntry(SCStudyInterfaceRef sc)
     sc.AutoLoop = 1; 
     sc.HideStudy = 1;
 
-    rr.Name = "risk:reward ratio";
-    rr.SetFloat(1.5f);
+    rr.Name = "Risk:Reward Ratio";
+    rr.SetFloat(1.3f);
+
+    inputSafeEntry.Name = "Safe Entry Percentage";
+    inputSafeEntry.SetFloat(0.2f);
     return;
   }
+
+  double safeEntryPercentage = inputSafeEntry.GetFloat();
 
   sc.CancelAllWorkingOrdersOnExit = 1;
   sc.AllowMultipleEntriesInSameDirection = 1;
