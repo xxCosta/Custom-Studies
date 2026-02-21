@@ -80,7 +80,7 @@ SCSFExport scsf_rectangleBoxEntry(SCStudyInterfaceRef sc)
   {
     sc.GraphName = "Entry Boi - S&D Entry";
     sc.UpdateAlways = 1;
-    sc.AutoLoop = 1; 
+    sc.AutoLoop = 0; 
     sc.HideStudy = 1;
 
     rr.Name = "Risk:Reward Ratio";
