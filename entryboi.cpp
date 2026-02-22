@@ -26,11 +26,11 @@ SCDLLName("Entry Boi")
 
 
 struct Order {
-  float slPrice;
-  float entryPrice;
-  float tpPrice;
-  float triggerPrice;
-  float safeEntryPriceAfterTrigHit;
+  double slPrice;
+  double entryPrice;
+  double tpPrice;
+  double triggerPrice;
+  double safeEntryPriceAfterTrigHit;
   int entryOrderID;
 };
 
@@ -56,14 +56,13 @@ s_SCNewOrder buildOrder(Order* o ){
 void orientateOrder(Order* o, SCInputRef rr, double safeEntryPercentage){
   std::swap(o->slPrice,o->entryPrice);
 
-  float tpBeforeSafeEntry = ((o->entryPrice - o->slPrice)*rr.GetFloat()) + o->entryPrice;
+  double tpBeforeSafeEntry = ((o->entryPrice - o->slPrice)*rr.GetFloat()) + o->entryPrice;
 
   double triggerPercentage = 0.30; //how deep is it gonna retrace (TODO: set this number to a user input) 
-  // double safeEntryPercentage = 0.10;
   o->triggerPrice = o->entryPrice - triggerPercentage * (o->entryPrice - o->slPrice); //refer to math stuff in your journal for an explantion on this formula               
   o->safeEntryPriceAfterTrigHit = o->entryPrice + safeEntryPercentage * (tpBeforeSafeEntry - o->entryPrice);
 
-  float tpAfterSafeEntry = ((o->safeEntryPriceAfterTrigHit - o->slPrice)*rr.GetFloat()) + o->safeEntryPriceAfterTrigHit;//i want to tp to be calculated based on the safe o->entryPrice not the edge of box,i'll have to recalculate
+  double tpAfterSafeEntry = ((o->safeEntryPriceAfterTrigHit - o->slPrice)*rr.GetFloat()) + o->safeEntryPriceAfterTrigHit;//i want to tp to be calculated based on the safe o->entryPrice not the edge of box,i'll have to recalculate
   o->tpPrice = tpAfterSafeEntry; 
 }
 
@@ -129,14 +128,14 @@ SCSFExport scsf_rectangleBoxEntry(SCStudyInterfaceRef sc)
       entryOrder->slPrice = entryBox.BeginValue;
       entryOrder->entryPrice = entryBox.EndValue;
 
-      float tpBeforeSafeEntry = ((entryOrder->entryPrice - entryOrder->slPrice)*rr.GetFloat()) + entryOrder->entryPrice;
+      double tpBeforeSafeEntry = ((entryOrder->entryPrice - entryOrder->slPrice)*rr.GetFloat()) + entryOrder->entryPrice;
 
       double triggerPercentage = 0.30; //how deep is it gonna retrace (TODO: set this number to a user input) 
       //double safeEntryPercentage = 0.28;
       entryOrder->triggerPrice = entryOrder->entryPrice - triggerPercentage * (entryOrder->entryPrice - entryOrder->slPrice); //refer to math stuff in your journal for an explantion on this formula               
       entryOrder->safeEntryPriceAfterTrigHit = entryOrder->entryPrice + safeEntryPercentage * (tpBeforeSafeEntry - entryOrder->entryPrice);
 
-      float tpAfterSafeEntry = ((entryOrder->safeEntryPriceAfterTrigHit - entryOrder->slPrice)*rr.GetFloat()) + entryOrder->safeEntryPriceAfterTrigHit;//i want to tp to be calculated based on the safe entry not the edge of box,i'll have to recalculate
+      double tpAfterSafeEntry = ((entryOrder->safeEntryPriceAfterTrigHit - entryOrder->slPrice)*rr.GetFloat()) + entryOrder->safeEntryPriceAfterTrigHit;//i want to tp to be calculated based on the safe entry not the edge of box,i'll have to recalculate
       entryOrder->tpPrice = tpAfterSafeEntry; 
 
 
