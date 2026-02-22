@@ -180,23 +180,36 @@ SCSFExport scsf_rectangleBoxEntry(SCStudyInterfaceRef sc)
     }
 
   }
-  s_SCTradeOrder currentOrder;
-  if(sc.GetOrderByIndex(0,currentOrder)){
-
-    sc.AddMessageToLog(SCString().Format("orderId %.d",currentOrder.InternalOrderID),0);
+s_SCTradeOrder currentOrder;
+if (sc.GetOrderByIndex(0, currentOrder))
+{
     s_SCTradeOrder slCurrentOrder;
-
     sc.GetOrderByOrderID(currentOrder.StopChildInternalOrderID, slCurrentOrder);
-    double highHardStop = std::fmax(currentOrder.Price1, slCurrentOrder.Price1);
-    double lowHardStop = std::fmin(currentOrder.Price1, slCurrentOrder.Price1);
-    double currentPrice = sc.GetLastPriceForTrading();
-    double pctHardStop = 0.10;
-    double hardStop = lowHardStop - pctHardStop*(highHardStop-lowHardStop);
-    sc.AddMessageToLog(SCString().Format("hard stop %.3f",hardStop),0);
-    if(currentPrice < hardStop){
-      sc.CancelAllOrders();
-    }
 
-  }
+    double entry  = currentOrder.Price1;
+    double stop   = slCurrentOrder.Price1;
+    double price  = sc.GetLastPriceForTrading();
+    double pct    = 0.10;
+
+    double buffer = fabs(entry - stop) * pct;
+
+    bool isLong  = (entry > stop);
+    bool isShort = (entry < stop);
+
+    double hardStop;
+
+    if (isLong)
+    {
+        hardStop = stop - buffer;
+        if (price < hardStop)
+            sc.CancelAllOrders();
+    }
+    else if (isShort)
+    {
+        hardStop = stop + buffer;
+        if (price > hardStop)
+            sc.CancelAllOrders();
+    }
+}
 
 }
