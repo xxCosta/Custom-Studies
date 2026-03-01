@@ -8,7 +8,7 @@ SCDLLName("replay-manager")
 
 SCSFExport scsf_ToggleJump(SCStudyInterfaceRef sc)
 {
-    static std::vector<int> chartNums = {2,3,5,6,8}; 
+    static std::vector<int> chartNums = {2,3,1,6,8}; 
     // int chartNum2 = sc.ChartNumber;
     int chartNum2 = 2;
     int chartNum8 = 8;
@@ -45,7 +45,7 @@ SCSFExport scsf_ToggleJump(SCStudyInterfaceRef sc)
 
                 n_ACSIL::s_ChartReplayParameters replayParams;
                 replayParams.ChartNumber = chartNum;
-                replayParams.ReplaySpeed = 4;
+                replayParams.ReplaySpeed = 1;
                 replayParams.StartDateTime = replayDate;
 
                 sc.StartChartReplayNew(replayParams);
@@ -100,7 +100,7 @@ SCSFExport scsf_ToggleJump(SCStudyInterfaceRef sc)
     if(fastForwardActive) {
         if(sc.IndexOfLastVisibleBar >= futureBarIndex){
             for(int chartNum : chartNums){
-                sc.ChangeChartReplaySpeed(chartNum, 4); 
+                sc.ChangeChartReplaySpeed(chartNum, 1); 
             }
         // sc.AddMessageToLog("done fast forawrd",0);
         fastForwardActive = false;
@@ -110,7 +110,7 @@ SCSFExport scsf_ToggleJump(SCStudyInterfaceRef sc)
     // F key logic: toggle replay speed
     if (keyboardCode == 70)
     {
-        speed = (speed == 4000) ? 4 : 4000;
+        speed = (speed == 4000) ? 1 : 4000;
         for(int chartNum : chartNums){
 
             sc.ChangeChartReplaySpeed(chartNum, speed);
