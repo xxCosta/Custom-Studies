@@ -1,8 +1,8 @@
 //
 //
 // INSTRUCTIONS:
-// B to Buy 
-// S to Sell 
+// B to Buy
+// S to Sell
 // C to cancel current orders
 // T to take profit
 //
@@ -20,22 +20,20 @@
 //
 //
 #include "sierrachart.h"
-#include <vector>
 #include <utility>
-SCDLLName("Entry Boi")
-
+#include <vector>
+SCDLLName("Entry Boi");
 
 struct Order {
   double slPrice;
   double entryPrice;
   double tpPrice;
   double triggerPrice;
-  double safeEntryPriceAfterTrigHit;
+  double safeEntry;
   int entryOrderID;
 };
 
-
-s_SCNewOrder buildOrder(Order* o ){
+s_SCNewOrder buildOrder(Order *o) {
 
   s_SCNewOrder newOrder = s_SCNewOrder();
 
@@ -112,34 +110,19 @@ SCSFExport scsf_rectangleBoxEntry(SCStudyInterfaceRef sc) {
   sc.MaximumPositionAllowed = 200;
   sc.AllowOnlyOneTradePerBar = 0;
 
-  int chartNum = sc.ChartNumber;	
-  s_UseTool entryBox;	
+  int chartNum = sc.ChartNumber;
+  s_UseTool entryBox;
 
-  Order* entryOrder = (Order*)sc.GetPersistentPointer(0);
-  if(entryOrder == nullptr){
+  Order *entryOrder = (Order *)sc.GetPersistentPointer(0);
+  if (entryOrder == nullptr) {
 
     entryOrder = new Order;
     sc.SetPersistentPointer(0, entryOrder);
   }
 
-  //i need to wrap this in an if statement so that it only runs on open orders
-  //also needs to be independent per chart so the multiple orders across...
-  //different charts dont affect eachother.  
-  //
-  // double highHardStop = std::fmax(entryOrder->slPrice, entryOrder->safeEntryPriceAfterTrigHit);
-  // double lowHardStop = std::fmin(entryOrder->slPrice, entryOrder->safeEntryPriceAfterTrigHit);
-  // double currentPrice = sc.GetLastPriceForTrading();
-  // double pctHardStop = 0.10;
-  // double hardStop = lowHardStop - pctHardStop*(highHardStop-lowHardStop);
-  // if(currentPrice < hardStop){
-  //   sc.CancelAllOrders();
-  // }
-  //
-
-
-
-  if(sc.GetUserDrawnChartDrawing(chartNum, DRAWING_RECTANGLEHIGHLIGHT, entryBox, -1)){
-    if(entryOrder->slPrice != entryBox.BeginValue || entryOrder->entryPrice != entryBox.EndValue ){
+  if (sc.GetUserDrawnChartDrawing(chartNum, DRAWING_RECTANGLEHIGHLIGHT, entryBox, -1)) {
+    if (entryOrder->slPrice != entryBox.BeginValue ||
+        entryOrder->entryPrice != entryBox.EndValue) {
       entryOrder->slPrice = entryBox.BeginValue;
       entryOrder->entryPrice = entryBox.EndValue;
 
@@ -179,72 +162,60 @@ SCSFExport scsf_rectangleBoxEntry(SCStudyInterfaceRef sc) {
       showPips.Text.Format("%.d", pips);
       sc.UseTool(showPips);
     }
-
-    //by default, when a button is pressed its just a toggle
-    //this ensures that it acts as a click rather than a toggle,
-    //allowing me to fire things once through the button
-
-
   }
 
-  std::vector<int> vGuiButtons = {1,2};
-  for (int x : vGuiButtons){
-    if(sc.GetCustomStudyControlBarButtonEnableState(x) == 1){
-      if(x==1){
+  std::vector<int> vGuiButtons = {1, 2};
+  for (int x : vGuiButtons) {
+    if (sc.GetCustomStudyControlBarButtonEnableState(x) == 1) {
+      if (x == 1) {
 
-        if(entryOrder->slPrice>entryOrder->entryPrice){
+        if (entryOrder->slPrice > entryOrder->entryPrice) {
           orientateOrder(entryOrder, rr, safeEntryPercentage);
-          sc.AddMessageToLog("swapped",0); 
+          sc.AddMessageToLog("swapped", 0);
         }
 
         s_SCNewOrder newOrder = buildOrder(entryOrder);
         sc.SetAttachedOrders(newOrder);
-        entryOrder->entryOrderID= sc.BuyEntry(newOrder);
+        entryOrder->entryOrderID = sc.BuyEntry(newOrder);
 
-      }else if(x==2) {
-        if(entryOrder->entryPrice>entryOrder->slPrice){
+      } else if (x == 2) {
+        if (entryOrder->entryPrice > entryOrder->slPrice) {
           orientateOrder(entryOrder, rr, safeEntryPercentage);
-          sc.AddMessageToLog("swapped",0); 
+          sc.AddMessageToLog("swapped", 0);
         }
 
         s_SCNewOrder newOrder = buildOrder(entryOrder);
         sc.SetAttachedOrders(newOrder);
         entryOrder->entryOrderID = sc.SellEntry(newOrder);
       }
-      sc.SetCustomStudyControlBarButtonEnable(x,0);
+      sc.SetCustomStudyControlBarButtonEnable(x, 0);
     }
-
   }
-s_SCTradeOrder currentOrder;
-if (sc.GetOrderByIndex(0, currentOrder))
-{
+  s_SCTradeOrder currentOrder;
+  if (sc.GetOrderByIndex(0, currentOrder)) {
     s_SCTradeOrder slCurrentOrder;
     sc.GetOrderByOrderID(currentOrder.StopChildInternalOrderID, slCurrentOrder);
 
-    double entry  = currentOrder.Price1;
-    double stop   = slCurrentOrder.Price1;
-    double price  = sc.GetLastPriceForTrading();
-    double pct    = 0.10;
+    double entry = currentOrder.Price1;
+    double stop = slCurrentOrder.Price1;
+    double price = sc.GetLastPriceForTrading();
+    double pct = 0.10;
 
     double buffer = fabs(entry - stop) * pct;
 
-    bool isLong  = (entry > stop);
+    bool isLong = (entry > stop);
     bool isShort = (entry < stop);
 
     double hardStop;
 
-    if (isLong)
-    {
-        hardStop = stop - buffer;
-        if (price < hardStop)
-            sc.CancelAllOrders();
+    if (isLong) {
+      hardStop = stop - buffer;
+      if (price < hardStop)
+        sc.CancelAllOrders();
+    } else if (isShort) {
+      hardStop = stop + buffer;
+      if (price > hardStop)
+        sc.CancelAllOrders();
     }
-    else if (isShort)
-    {
-        hardStop = stop + buffer;
-        if (price > hardStop)
-            sc.CancelAllOrders();
-    }
-}
-
+  }
 }
