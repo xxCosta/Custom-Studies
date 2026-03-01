@@ -46,41 +46,56 @@ s_SCNewOrder buildOrder(Order* o ){
   newOrder.Stop1Price = o->slPrice;
   newOrder.AttachedOrderTarget1Type = SCT_ORDERTYPE_LIMIT;
   newOrder.Target1Price = o->tpPrice;
-  newOrder.Price1 = o->safeEntryPriceAfterTrigHit; 
-  newOrder.Price2 = o->triggerPrice; 
+  newOrder.Price1 = o->safeEntry;
+  newOrder.Price2 = o->triggerPrice;
 
   return newOrder;
-
 };
 
-void orientateOrder(Order* o, SCInputRef rr, double safeEntryPercentage){
-  std::swap(o->slPrice,o->entryPrice);
+void orientateOrder(Order *o, SCInputRef rr, double safeEntryPercentage) {
+  std::swap(o->slPrice, o->entryPrice);
 
-  double tpBeforeSafeEntry = ((o->entryPrice - o->slPrice)*rr.GetFloat()) + o->entryPrice;
+  double tpBeforeSafeEntry =
+      ((o->entryPrice - o->slPrice) * rr.GetFloat()) + o->entryPrice;
 
-  double triggerPercentage = 0.30; //how deep is it gonna retrace (TODO: set this number to a user input) 
-  o->triggerPrice = o->entryPrice - triggerPercentage * (o->entryPrice - o->slPrice); //refer to math stuff in your journal for an explantion on this formula               
-  o->safeEntryPriceAfterTrigHit = o->entryPrice + safeEntryPercentage * (tpBeforeSafeEntry - o->entryPrice);
+  double triggerPercentage = 0.30;
+  o->triggerPrice = o->entryPrice - triggerPercentage * (o->entryPrice - o->slPrice);
+  o->safeEntry =
+      o->entryPrice + safeEntryPercentage * (tpBeforeSafeEntry - o->entryPrice);
 
-  double tpAfterSafeEntry = ((o->safeEntryPriceAfterTrigHit - o->slPrice)*rr.GetFloat()) + o->safeEntryPriceAfterTrigHit;//i want to tp to be calculated based on the safe o->entryPrice not the edge of box,i'll have to recalculate
-  o->tpPrice = tpAfterSafeEntry; 
+  double tpAfterSafeEntry = ((o->safeEntry - o->slPrice) * rr.GetFloat()) + o->safeEntry;
+  o->tpPrice = tpAfterSafeEntry;
 }
 
 
 
-SCSFExport scsf_rectangleBoxEntry(SCStudyInterfaceRef sc)
-{
+int getPips(double entry, double sl, SCStudyInterfaceRef sc) {
+  
+  double tickSize = sc.TickSize;
+  double e = entry;
+  double s = sl;
+  while (tickSize <= 0.9999) {
+    e *= 10;
+    s *= 10;
+    tickSize *= 10;
+  }
+  return (int)std::round(std::abs(e - s));
+}
 
+
+
+SCSFExport scsf_rectangleBoxEntry(SCStudyInterfaceRef sc) {
 
   SCInputRef rr = sc.Input[0];
   SCInputRef inputSafeEntry = sc.Input[1];
   // Section 1 - Set the configuration variables and defaults
-  if (sc.SetDefaults)
-  {
+  if (sc.SetDefaults) {
     sc.GraphName = "Entry Boi - S&D Entry";
     sc.UpdateAlways = 1;
-    sc.AutoLoop = 0; 
+    sc.AutoLoop = 0;
     sc.HideStudy = 1;
+
+    sc.Subgraph[0].Name = "risk in pips";
 
     rr.Name = "Risk:Reward Ratio";
     rr.SetFloat(1.3f);
@@ -128,21 +143,41 @@ SCSFExport scsf_rectangleBoxEntry(SCStudyInterfaceRef sc)
       entryOrder->slPrice = entryBox.BeginValue;
       entryOrder->entryPrice = entryBox.EndValue;
 
-      double tpBeforeSafeEntry = ((entryOrder->entryPrice - entryOrder->slPrice)*rr.GetFloat()) + entryOrder->entryPrice;
+      double tpBeforeSafeEntry =
+          ((entryOrder->entryPrice - entryOrder->slPrice) * rr.GetFloat()) +
+          entryOrder->entryPrice;
 
-      double triggerPercentage = 0.30; //how deep is it gonna retrace (TODO: set this number to a user input) 
-      //double safeEntryPercentage = 0.28;
-      entryOrder->triggerPrice = entryOrder->entryPrice - triggerPercentage * (entryOrder->entryPrice - entryOrder->slPrice); //refer to math stuff in your journal for an explantion on this formula               
-      entryOrder->safeEntryPriceAfterTrigHit = entryOrder->entryPrice + safeEntryPercentage * (tpBeforeSafeEntry - entryOrder->entryPrice);
+      double triggerPercentage = 0.30;
+      entryOrder->triggerPrice =
+          entryOrder->entryPrice -
+          triggerPercentage * (entryOrder->entryPrice - entryOrder->slPrice);
+      entryOrder->safeEntry =
+          entryOrder->entryPrice +
+          safeEntryPercentage * (tpBeforeSafeEntry - entryOrder->entryPrice);
 
-      double tpAfterSafeEntry = ((entryOrder->safeEntryPriceAfterTrigHit - entryOrder->slPrice)*rr.GetFloat()) + entryOrder->safeEntryPriceAfterTrigHit;//i want to tp to be calculated based on the safe entry not the edge of box,i'll have to recalculate
-      entryOrder->tpPrice = tpAfterSafeEntry; 
+      double tpAfterSafeEntry =
+          ((entryOrder->safeEntry - entryOrder->slPrice) * rr.GetFloat()) +
+          entryOrder->safeEntry;
+      entryOrder->tpPrice = tpAfterSafeEntry;
 
+      sc.AddMessageToLog(SCString().Format("entry at %.3f", entryOrder->entryPrice), 0);
+      sc.AddMessageToLog(SCString().Format("tp at%.3f", tpAfterSafeEntry), 0);
+      sc.AddMessageToLog(SCString().Format("tp at%.3f", entryOrder->tpPrice), 0);
+      sc.AddMessageToLog(SCString().Format("sl  at %.3f", entryOrder->slPrice), 0);
 
-      sc.AddMessageToLog(SCString().Format("entry at %.3f", entryOrder->entryPrice),0);
-      sc.AddMessageToLog(SCString().Format("tp at%.3f", tpAfterSafeEntry),0);
-      sc.AddMessageToLog(SCString().Format("tp at%.3f", entryOrder->tpPrice),0);
-      sc.AddMessageToLog(SCString().Format("sl  at %.3f", entryOrder->slPrice),0);
+      s_UseTool showPips;
+
+      showPips.Clear(); // reset tool structure for our next use
+      showPips.ChartNumber = sc.ChartNumber;
+      showPips.DrawingType = DRAWING_TEXT;
+      showPips.LineNumber = 5035;
+      showPips.BeginDateTime = entryBox.EndDateTime;
+      showPips.BeginValue = (entryBox.BeginValue + entryBox.EndValue)/2;
+      showPips.Region = sc.GraphRegion;
+      showPips.Color = RGB(138, 197, 255);
+      int pips = getPips(entryOrder->safeEntry, entryOrder->slPrice, sc);
+      showPips.Text.Format("%.d", pips);
+      sc.UseTool(showPips);
     }
 
     //by default, when a button is pressed its just a toggle
