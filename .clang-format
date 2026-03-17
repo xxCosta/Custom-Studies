@@ -1,1 +1,11 @@
+BasedOnStyle: LLVM
+
+StatementMacros:
+  - SCDLLName
+
+MacroBlockBegin: "^SCDLLName"
+MacroBlockEnd: "^SCDLLName"
+
+IndentPPDirectives: None
+
 ColumnLimit: 90
