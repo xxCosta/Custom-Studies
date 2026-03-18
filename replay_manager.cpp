@@ -6,12 +6,18 @@ int replaySpeed = 16000;
 SCSFExport scsf_ReplayMaster(SCStudyInterfaceRef sc) {
   if (sc.SetDefaults) {
     sc.GraphName = "Replay Manager - Master";
-    sc.GraphRegion = 1;
     sc.AutoLoop = 1;
     sc.UpdateAlways = 1;
 
-    sc.Input[0].Name = "start date";
-    sc.Input[0].SetDate(0);
+    sc.DisplayStudyInputValues = 0;
+    sc.DisplayStudyName = 0;
+    sc.GraphRegion = 0;
+    sc.GlobalDisplayStudySubgraphsNameAndValue = 0;
+
+    sc.Input[0].SetStudyID(8);
+
+    sc.Input[2].Name = "start date";
+    sc.Input[2].SetDate(0);
 
     sc.Input[1].Name = "Goal Time (0-23)";
     sc.Input[1].SetInt(18);
@@ -23,12 +29,12 @@ SCSFExport scsf_ReplayMaster(SCStudyInterfaceRef sc) {
   if (sc.IsFullRecalculation || sc.DownloadingHistoricalData)
     return;
 
-  SCDateTime replayStartDate = sc.Input[0].GetDate();
+  SCDateTime replayStartDate = sc.Input[2].GetDate();
   sc.SetPersistentSCDateTime(1, replayStartDate);
   n_ACSIL::s_ChartReplayParameters rparams;
   rparams.ReplaySpeed = 1;
   rparams.StartDateTime = replayStartDate;
-  rparams.SkipEmptyPeriods = 0;
+  rparams.SkipEmptyPeriods = 1;
   rparams.ReplayMode = n_ACSIL::REPLAY_MODE_STANDARD;
   rparams.ClearExistingTradeSimulationDataForSymbolAndTradeAccount = 0;
 
@@ -40,6 +46,7 @@ SCSFExport scsf_ReplayMaster(SCStudyInterfaceRef sc) {
   int &ffActive = sc.GetPersistentInt(1);
   int &ffInSession = sc.GetPersistentInt(2);
   SCSubgraphRef currentTimeS = sc.Subgraph[0];
+  currentTimeS.DrawStyle = DRAWSTYLE_HIDDEN;
   currentTimeS.Name = "Current Time in Seconds";
   int goalTime = 68200; // in seconds
 
@@ -67,12 +74,13 @@ SCSFExport scsf_ReplaySlave(SCStudyInterfaceRef sc) {
 
   if (sc.SetDefaults) {
     sc.GraphName = "Replay Manager - Slave";
-    sc.GraphRegion = 1;
     sc.AutoLoop = 1;
     sc.UpdateAlways = 1;
 
-    sc.Input[0].Name = "start date";
-    sc.Input[0].SetDate(0);
+    sc.DisplayStudyInputValues = 0;
+    sc.DisplayStudyName = 0;
+    sc.GraphRegion = 0;
+    sc.GlobalDisplayStudySubgraphsNameAndValue = 0;
 
     sc.Input[1].Name = "Master Chart Number";
     sc.Input[1].SetInt(3);
@@ -102,7 +110,7 @@ SCSFExport scsf_ReplaySlave(SCStudyInterfaceRef sc) {
     n_ACSIL::s_ChartReplayParameters rparams;
     rparams.ReplaySpeed = 1;
     rparams.StartDateTime = m.Date;
-    rparams.SkipEmptyPeriods = 0;
+    rparams.SkipEmptyPeriods = 1;
     rparams.ReplayMode = n_ACSIL::REPLAY_MODE_STANDARD;
     rparams.ClearExistingTradeSimulationDataForSymbolAndTradeAccount = 0;
     sc.StartChartReplayNew(rparams);
