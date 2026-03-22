@@ -30,11 +30,10 @@ SCSFExport scsf_ReplayMaster(SCStudyInterfaceRef sc) {
     return;
 
   SCDateTime replayStartDate = sc.Input[2].GetDate();
-  sc.SetPersistentSCDateTime(1, replayStartDate);
   n_ACSIL::s_ChartReplayParameters rparams;
   rparams.ReplaySpeed = 1;
   rparams.StartDateTime = replayStartDate;
-  rparams.SkipEmptyPeriods = 1;
+  rparams.SkipEmptyPeriods = 0;
   rparams.ReplayMode = n_ACSIL::REPLAY_MODE_STANDARD;
   rparams.ClearExistingTradeSimulationDataForSymbolAndTradeAccount = 0;
 
@@ -48,7 +47,7 @@ SCSFExport scsf_ReplayMaster(SCStudyInterfaceRef sc) {
   SCSubgraphRef currentTimeS = sc.Subgraph[0];
   currentTimeS.DrawStyle = DRAWSTYLE_HIDDEN;
   currentTimeS.Name = "Current Time in Seconds";
-  int goalTime = 68200; // in seconds
+  int goalTime = 67000; // in seconds
 
   currentTimeS[sc.Index] = sc.BaseDateTimeIn[sc.Index].GetTimeInSeconds();
   int ct = currentTimeS[sc.Index];
@@ -67,83 +66,5 @@ SCSFExport scsf_ReplayMaster(SCStudyInterfaceRef sc) {
 
   if (ct < goalTime) {
     ffInSession = false;
-  }
-}
-
-SCSFExport scsf_ReplaySlave(SCStudyInterfaceRef sc) {
-
-  if (sc.SetDefaults) {
-    sc.GraphName = "Replay Manager - Slave";
-    sc.AutoLoop = 1;
-    sc.UpdateAlways = 1;
-
-    sc.DisplayStudyInputValues = 0;
-    sc.DisplayStudyName = 0;
-    sc.GraphRegion = 0;
-    sc.GlobalDisplayStudySubgraphsNameAndValue = 0;
-
-    sc.Input[1].Name = "Master Chart Number";
-    sc.Input[1].SetInt(3);
-
-    sc.Input[2].Name = "Master Chart Study ID";
-    sc.Input[2].SetInt(8);
-
-    sc.MaintainAdditionalChartDataArrays = 1;
-
-    return;
-  }
-  if (sc.IsFullRecalculation || sc.DownloadingHistoricalData)
-    return;
-
-  struct mParams {
-    int ChartNumber;
-    int StudyId;
-    SCDateTime Date;
-    bool ffActive;
-  } m;
-
-  m.ChartNumber = sc.Input[1].GetInt();
-  m.StudyId = sc.Input[2].GetInt();
-  m.Date = sc.GetPersistentSCDateTimeFromChartStudy(m.ChartNumber, m.StudyId, 1);
-
-  if (sc.GetCustomStudyControlBarButtonEnableState(4)) {
-    n_ACSIL::s_ChartReplayParameters rparams;
-    rparams.ReplaySpeed = 1;
-    rparams.StartDateTime = m.Date;
-    rparams.SkipEmptyPeriods = 1;
-    rparams.ReplayMode = n_ACSIL::REPLAY_MODE_STANDARD;
-    rparams.ClearExistingTradeSimulationDataForSymbolAndTradeAccount = 0;
-    sc.StartChartReplayNew(rparams);
-    sc.SetCustomStudyControlBarButtonEnable(4, 0);
-  }
-
-  int &ffActiveSlave = sc.GetPersistentInt(5);
-  int &ffInSessionSlave = sc.GetPersistentInt(6);
-  SCSubgraphRef currentTimeS = sc.Subgraph[0];
-  currentTimeS.Name = "Current Time in Seconds";
-  int goalTime = 68200; // in seconds
-
-  m.ffActive = sc.GetPersistentIntFromChartStudy(m.ChartNumber, m.StudyId, 1);
-
-  currentTimeS[sc.Index] = sc.BaseDateTimeIn[sc.Index].GetTimeInSeconds();
-  int ct = currentTimeS[sc.Index];
-  float currentReplaySpeed = sc.GetChartReplaySpeed(sc.ChartNumber);
-  if (currentReplaySpeed > 1000) {
-    sc.AddMessageToLog("turned off master tracking", 0);
-    m.ffActive = false;
-  }
-  if (m.ffActive) {
-    sc.ChangeChartReplaySpeed(sc.ChartNumber, replaySpeed);
-    ffActiveSlave = true;
-  }
-
-  if (ffActiveSlave && ct >= goalTime && !ffInSessionSlave) {
-    sc.ChangeChartReplaySpeed(sc.ChartNumber, 1);
-    ffActiveSlave = false;
-    ffInSessionSlave = true;
-  }
-
-  if (ct < goalTime) {
-    ffInSessionSlave = false;
   }
 }
