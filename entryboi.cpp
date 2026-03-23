@@ -33,15 +33,24 @@ struct Order {
   int entryOrderID;
 };
 
-s_SCNewOrder buildOrder(Order *o) {
-
+s_SCNewOrder buildOrder(Order *o, SCStudyInterfaceRef sc) {
   s_SCNewOrder newOrder = s_SCNewOrder();
+
+  double trailTrigPrice;
+  double trailOffset;
+
+  trailTrigPrice = fabs(o->tpPrice - o->safeEntry) * 0.5;
+  trailOffset = fabs(o->safeEntry - o->slPrice) * 0.6;
 
   newOrder.OrderQuantity = 100;
   newOrder.OrderType = SCT_ORDERTYPE_TRIGGERED_STOP;
   newOrder.TimeInForce = SCT_TIF_DAY;
-  newOrder.AttachedOrderStop1Type = SCT_ORDERTYPE_STOP;
-  newOrder.Stop1Price = o->slPrice;
+  // newOrder.AttachedOrderStop1Type = SCT_ORDERTYPE_STOP;
+  // newOrder.Stop1Price = o->slPrice;
+  newOrder.AttachedOrderStop1Type = SCT_ORDERTYPE_TRIGGERED_TRAILING_STOP_3_OFFSETS;
+  newOrder.Stop1Offset = fabs(o->safeEntry - o->slPrice);
+  newOrder.AttachedOrderStop1_TriggeredTrailStopTrailPriceOffset = trailOffset;
+  newOrder.AttachedOrderStop1_TriggeredTrailStopTriggerPriceOffset = trailTrigPrice;
   newOrder.AttachedOrderTarget1Type = SCT_ORDERTYPE_LIMIT;
   newOrder.Target1Price = o->tpPrice;
   newOrder.Price1 = o->safeEntry;
@@ -181,7 +190,7 @@ SCSFExport scsf_rectangleBoxEntry(SCStudyInterfaceRef sc) {
           orientateOrder(entryOrder, rr, safeEntryPercentage, inputTriggerPercentage);
         }
 
-        s_SCNewOrder newOrder = buildOrder(entryOrder);
+        s_SCNewOrder newOrder = buildOrder(entryOrder, sc);
         sc.SetAttachedOrders(newOrder);
         entryOrder->entryOrderID = sc.BuyEntry(newOrder);
 
@@ -190,7 +199,7 @@ SCSFExport scsf_rectangleBoxEntry(SCStudyInterfaceRef sc) {
           orientateOrder(entryOrder, rr, safeEntryPercentage, inputTriggerPercentage);
         }
 
-        s_SCNewOrder newOrder = buildOrder(entryOrder);
+        s_SCNewOrder newOrder = buildOrder(entryOrder, sc);
         sc.SetAttachedOrders(newOrder);
         entryOrder->entryOrderID = sc.SellEntry(newOrder);
       }
@@ -213,6 +222,9 @@ SCSFExport scsf_rectangleBoxEntry(SCStudyInterfaceRef sc) {
     bool isShort = (entry < stop);
 
     double hardStop;
+
+    if (slCurrentOrder.InternalOrderID == 0 || slCurrentOrder.Price1 == 0)
+      return; // stop child not valid yet, avoid nuking attached orders
 
     if (isLong) {
       hardStop = stop - buffer;
