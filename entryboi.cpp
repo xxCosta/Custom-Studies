@@ -100,6 +100,11 @@ SCSFExport scsf_rectangleBoxEntry(SCStudyInterfaceRef sc) {
     sc.UpdateAlways = 1;
     sc.HideStudy = 0;
 
+    sc.GraphRegion = 0;
+    sc.DisplayStudyName = 0;
+    sc.DisplayStudyInputValues = 0;
+    sc.GlobalDisplayStudySubgraphsNameAndValue = 0;
+
     sc.Subgraph[0].Name = "risk in pips";
 
     rr.Name = "Risk:Reward Ratio";
