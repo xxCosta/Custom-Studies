@@ -31,6 +31,7 @@ struct Order {
   double triggerPrice;
   double safeEntry;
   int entryOrderID;
+  int orderMode;
 };
 
 s_SCNewOrder buildOrder(Order *o, SCStudyInterfaceRef sc) {
@@ -39,8 +40,8 @@ s_SCNewOrder buildOrder(Order *o, SCStudyInterfaceRef sc) {
   double trailTrigPrice;
   double trailOffset;
 
-  trailTrigPrice = fabs(o->tpPrice - o->safeEntry) * 0.5;
-  trailOffset = fabs(o->safeEntry - o->slPrice) * 0.6;
+  trailTrigPrice = fabs(o->tpPrice - o->safeEntry) * 0.8;
+  trailOffset = fabs(o->safeEntry - o->slPrice) * 0.8;
 
   newOrder.OrderQuantity = 100;
   newOrder.OrderType = SCT_ORDERTYPE_TRIGGERED_STOP;
@@ -51,8 +52,10 @@ s_SCNewOrder buildOrder(Order *o, SCStudyInterfaceRef sc) {
   newOrder.Stop1Offset = fabs(o->safeEntry - o->slPrice);
   newOrder.AttachedOrderStop1_TriggeredTrailStopTrailPriceOffset = trailOffset;
   newOrder.AttachedOrderStop1_TriggeredTrailStopTriggerPriceOffset = trailTrigPrice;
-  newOrder.AttachedOrderTarget1Type = SCT_ORDERTYPE_LIMIT;
-  newOrder.Target1Price = o->tpPrice;
+  if (o->orderMode == 0) {
+    newOrder.AttachedOrderTarget1Type = SCT_ORDERTYPE_LIMIT;
+    newOrder.Target1Price = o->tpPrice;
+  }
   newOrder.Price1 = o->safeEntry;
   newOrder.Price2 = o->triggerPrice;
 
@@ -93,6 +96,7 @@ SCSFExport scsf_rectangleBoxEntry(SCStudyInterfaceRef sc) {
   SCInputRef rr = sc.Input[0];
   SCInputRef inputSafeEntry = sc.Input[1];
   SCInputRef inputTriggerPercentage = sc.Input[2];
+  SCInputRef inputOrderMode = sc.Input[3];
 
   if (sc.SetDefaults) {
     sc.GraphName = "Entry Boi - S&D Entry";
@@ -115,6 +119,10 @@ SCSFExport scsf_rectangleBoxEntry(SCStudyInterfaceRef sc) {
 
     inputTriggerPercentage.Name = "trigger Percentage";
     inputTriggerPercentage.SetDouble(0.10);
+
+    inputOrderMode.Name = "order mode";
+    inputOrderMode.SetCustomInputStrings("challenge; runners");
+    inputOrderMode.SetCustomInputIndex(0);
 
     return;
   }
@@ -144,12 +152,12 @@ SCSFExport scsf_rectangleBoxEntry(SCStudyInterfaceRef sc) {
         entryOrder->entryPrice != entryBox.EndValue) {
       entryOrder->slPrice = entryBox.BeginValue;
       entryOrder->entryPrice = entryBox.EndValue;
+      entryOrder->orderMode = inputOrderMode.GetIndex();
 
       double tpBeforeSafeEntry =
           ((entryOrder->entryPrice - entryOrder->slPrice) * rr.GetFloat()) +
           entryOrder->entryPrice;
 
-      // double triggerPercentage = 0.30;
       double triggerPercentage = inputTriggerPercentage.GetDouble();
       entryOrder->triggerPrice =
           entryOrder->entryPrice -
@@ -229,7 +237,9 @@ SCSFExport scsf_rectangleBoxEntry(SCStudyInterfaceRef sc) {
     double hardStop;
 
     if (slCurrentOrder.InternalOrderID == 0 || slCurrentOrder.Price1 == 0)
-      return; // stop child not valid yet, avoid nuking attached orders
+      return; // this so that the hardstop doesnt get triggered when sl is moved
+    // there is a split second where the below stuff gets triggered because the sl
+    // is 0.
 
     if (isLong) {
       hardStop = stop - buffer;
