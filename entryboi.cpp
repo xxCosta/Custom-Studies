@@ -1,30 +1,8 @@
-//
-//
-// INSTRUCTIONS:
-// B to Buy
-// S to Sell
-// C to cancel current orders
-// T to take profit
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
 #include "sierrachart.h"
-#include <utility>
-#include <vector>
 SCDLLName("Entry Boi");
 
 struct Order {
+  float size;
   double slPrice;
   double entryPrice;
   double tpPrice;
@@ -34,7 +12,26 @@ struct Order {
   int orderMode;
 };
 
-s_SCNewOrder buildOrder(Order *o, SCStudyInterfaceRef sc) {
+struct Account {
+  int size;
+  int risk;
+};
+
+int sizeOrder(Order *o, SCStudyInterfaceRef sc, Account *a) {
+
+  float tickValue = sc.CurrencyValuePerTick;
+  int riskDistance = sc.Subgraph[0][sc.Index];
+  float riskValue = tickValue * riskDistance;
+
+  float accRisk = a->size * (a->risk / 100.0f);
+
+  int size =
+      (int)(riskValue / accRisk); // gonna need to figure out lot size as well for forex
+
+  return size;
+}
+
+s_SCNewOrder buildOrder(Order *o, SCStudyInterfaceRef sc, Account *a) {
   s_SCNewOrder newOrder = s_SCNewOrder();
 
   double trailTrigPrice;
@@ -43,7 +40,6 @@ s_SCNewOrder buildOrder(Order *o, SCStudyInterfaceRef sc) {
   trailTrigPrice = fabs(o->tpPrice - o->safeEntry) * 0.8;
   trailOffset = fabs(o->safeEntry - o->slPrice) * 0.8;
 
-  newOrder.OrderQuantity = 100;
   newOrder.OrderType = SCT_ORDERTYPE_TRIGGERED_STOP;
   newOrder.TimeInForce = SCT_TIF_DAY;
   // newOrder.AttachedOrderStop1Type = SCT_ORDERTYPE_STOP;
@@ -59,6 +55,7 @@ s_SCNewOrder buildOrder(Order *o, SCStudyInterfaceRef sc) {
   newOrder.Price1 = o->safeEntry;
   newOrder.Price2 = o->triggerPrice;
 
+  newOrder.OrderQuantity = sizeOrder(o, sc, a);
   return newOrder;
 };
 
@@ -97,6 +94,8 @@ SCSFExport scsf_rectangleBoxEntry(SCStudyInterfaceRef sc) {
   SCInputRef inputSafeEntry = sc.Input[1];
   SCInputRef inputTriggerPercentage = sc.Input[2];
   SCInputRef inputOrderMode = sc.Input[3];
+  SCInputRef inputAccountSize = sc.Input[4];
+  SCInputRef inputAccountRisk = sc.Input[5];
 
   if (sc.SetDefaults) {
     sc.GraphName = "Entry Boi - S&D Entry";
@@ -108,6 +107,11 @@ SCSFExport scsf_rectangleBoxEntry(SCStudyInterfaceRef sc) {
     sc.DisplayStudyName = 0;
     sc.DisplayStudyInputValues = 0;
     sc.GlobalDisplayStudySubgraphsNameAndValue = 0;
+
+    sc.CancelAllWorkingOrdersOnExit = 1;
+    sc.AllowMultipleEntriesInSameDirection = 1;
+    sc.MaximumPositionAllowed = 200;
+    sc.AllowOnlyOneTradePerBar = 0;
 
     sc.Subgraph[0].Name = "risk in pips";
 
@@ -124,6 +128,12 @@ SCSFExport scsf_rectangleBoxEntry(SCStudyInterfaceRef sc) {
     inputOrderMode.SetCustomInputStrings("challenge; runners");
     inputOrderMode.SetCustomInputIndex(0);
 
+    inputAccountSize.Name = "Account Size";
+    inputAccountSize.SetInt(25000);
+
+    inputAccountRisk.Name = "Account Risk (%)";
+    inputAccountRisk.SetInt(2);
+
     return;
   }
 
@@ -131,21 +141,22 @@ SCSFExport scsf_rectangleBoxEntry(SCStudyInterfaceRef sc) {
     return;
 
   double safeEntryPercentage = inputSafeEntry.GetFloat();
-
-  sc.CancelAllWorkingOrdersOnExit = 1;
-  sc.AllowMultipleEntriesInSameDirection = 1;
-  sc.MaximumPositionAllowed = 200;
-  sc.AllowOnlyOneTradePerBar = 0;
-
   int chartNum = sc.ChartNumber;
   s_UseTool entryBox;
 
   Order *entryOrder = (Order *)sc.GetPersistentPointer(0);
   if (entryOrder == nullptr) {
-
     entryOrder = new Order;
     sc.SetPersistentPointer(0, entryOrder);
   }
+
+  Account *account = (Account *)sc.GetPersistentPointer(1);
+  if (account == nullptr) {
+    account = new Account;
+    sc.SetPersistentPointer(1, account);
+  }
+  account->size = inputAccountSize.GetInt();
+  account->risk = inputAccountRisk.GetInt();
 
   if (sc.GetUserDrawnChartDrawing(chartNum, DRAWING_RECTANGLEHIGHLIGHT, entryBox, -1)) {
     if (entryOrder->slPrice != entryBox.BeginValue ||
@@ -203,7 +214,7 @@ SCSFExport scsf_rectangleBoxEntry(SCStudyInterfaceRef sc) {
           orientateOrder(entryOrder, rr, safeEntryPercentage, inputTriggerPercentage);
         }
 
-        s_SCNewOrder newOrder = buildOrder(entryOrder, sc);
+        s_SCNewOrder newOrder = buildOrder(entryOrder, sc, account);
         sc.SetAttachedOrders(newOrder);
         entryOrder->entryOrderID = sc.BuyEntry(newOrder);
 
@@ -212,7 +223,7 @@ SCSFExport scsf_rectangleBoxEntry(SCStudyInterfaceRef sc) {
           orientateOrder(entryOrder, rr, safeEntryPercentage, inputTriggerPercentage);
         }
 
-        s_SCNewOrder newOrder = buildOrder(entryOrder, sc);
+        s_SCNewOrder newOrder = buildOrder(entryOrder, sc, account);
         sc.SetAttachedOrders(newOrder);
         entryOrder->entryOrderID = sc.SellEntry(newOrder);
       }
