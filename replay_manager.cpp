@@ -1,3 +1,20 @@
+/*
+=======================================
+HOW TO USE THIS BIH:
+
+make sure to only put this on 1 chart only. Make sure you set "all chartbooks"
+and the system will turn the other charts into slaves.
+
+make sure "skip empty periods" is unchecked, it will cause syn issues.
+
+
+set start date inside the studie's settings
+"s" to start replay it from normal mode
+"e" to fast forward to next day.(set ff time in settings)
+
+=======================================
+*/
+
 #include "sierrachart.h"
 SCDLLName("replay-manager")
 
