@@ -22,12 +22,21 @@ int sizeOrder(Order *o, SCStudyInterfaceRef sc, Account *a) {
   float tickValue = sc.CurrencyValuePerTick;
   int riskDistance = sc.Subgraph[0][sc.Index];
   float riskValue = tickValue * riskDistance;
-
   float accRisk = a->size * (a->risk / 100.0f);
+  sc.AddMessageToLog(SCString().Format("acc risk %.3f", accRisk), 0);
+  sc.AddMessageToLog(SCString().Format(" risk value%.3f", riskValue), 0);
 
-  int size =
-      (int)(riskValue / accRisk); // gonna need to figure out lot size as well for forex
-
+  int size;
+  if (riskValue > accRisk) {
+    size = 0;
+    sc.SetAlert(1, "This zone is to big for your risk. Choose a smaller contract");
+  } else {
+    size =
+        (int)(accRisk / riskValue); // gonna need to figure out lot size as well for forex
+  }
+  if (size > 10) {
+    size = 10
+  }
   return size;
 }
 
@@ -216,6 +225,7 @@ SCSFExport scsf_rectangleBoxEntry(SCStudyInterfaceRef sc) {
 
         s_SCNewOrder newOrder = buildOrder(entryOrder, sc, account);
         sc.SetAttachedOrders(newOrder);
+
         entryOrder->entryOrderID = sc.BuyEntry(newOrder);
 
       } else if (x == 2) {
