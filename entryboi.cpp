@@ -112,6 +112,10 @@ SCSFExport scsf_rectangleBoxEntry(SCStudyInterfaceRef sc) {
     sc.UpdateAlways = 1;
     sc.HideStudy = 0;
 
+    // During development set this flag to 1, so the DLL can be rebuilt without restarting
+    // Sierra Chart. When development is completed, set it to 0 to improve performance.
+    sc.FreeDLL = 1;
+
     sc.GraphRegion = 0;
     sc.DisplayStudyName = 0;
     sc.DisplayStudyInputValues = 0;
