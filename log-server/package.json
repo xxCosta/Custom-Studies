@@ -1,0 +1,19 @@
+{
+  "name": "log-server",
+  "module": "index.ts",
+  "type": "module",
+  "scripts": {
+    "dev": "bun run --watch index.ts"
+  },
+  "private": true,
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@types/pouchdb": "^6.4.2",
+    "pouchdb": "^9.0.0"
+  }
+}
