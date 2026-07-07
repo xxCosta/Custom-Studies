@@ -35,7 +35,7 @@ int sizeOrder(Order *o, SCStudyInterfaceRef sc, Account *a) {
         (int)(accRisk / riskValue); // gonna need to figure out lot size as well for forex
   }
   if (size > 10) {
-    size = 10
+    size = 10;
   }
   return size;
 }
@@ -125,6 +125,8 @@ SCSFExport scsf_rectangleBoxEntry(SCStudyInterfaceRef sc) {
     sc.AllowMultipleEntriesInSameDirection = 1;
     sc.MaximumPositionAllowed = 200;
     sc.AllowOnlyOneTradePerBar = 0;
+
+    sc.SendOrdersToTradeService = 1;
 
     sc.Subgraph[0].Name = "risk in pips";
 
