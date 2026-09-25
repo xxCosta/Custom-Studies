@@ -1,4 +1,8 @@
+#include "json.h"
 #include "sierrachart.h"
+
+using json = nlohmann::json;
+
 SCDLLName("Entry Boi");
 
 struct Order {
@@ -16,6 +20,40 @@ struct Account {
   int size;
   int risk;
 };
+
+void sendOrderData(SCStudyInterfaceRef sc) {
+
+  //----------HTTP POST REQEST----------
+  int &RequestState = sc.GetPersistentInt(11);
+
+  // Do data processing
+
+  if (sc.UpdateStartIndex == 0 && sc.IsFullRecalculation) {
+    if (RequestState == HTTP_REQUEST_ERROR || RequestState == HTTP_REQUEST_RECEIVED) {
+      // n_ACSIL::s_HTTPHeader HTTPHeader;
+      // HTTPHeader.Name = "Custom";
+      // HTTPHeader.Value = "Value";
+
+      // Make a request to the server.
+      // When the request is complete and all of the data has been downloaded,
+      // this study function will be called with the file placed into the
+      // sc.HTTPResponse character string array.
+      if (!sc.MakeHTTPPOSTRequest("https://www.sierrachart.com/Test/ACSILPOSTTest.php",
+                                  "Message=PostData", nullptr, 0)) {
+        sc.AddMessageToLog("Error making HTTP request.", 1);
+      }
+
+      RequestState = HTTP_REQUEST_MADE;
+    }
+  }
+
+  if (RequestState == HTTP_REQUEST_MADE && sc.HTTPRequestID != 0) {
+    RequestState = HTTP_REQUEST_RECEIVED;
+
+    // Display the response from the Web server in the Message Log
+    sc.AddMessageToLog(sc.HTTPResponse, 1);
+  }
+}
 
 int sizeOrder(Order *o, SCStudyInterfaceRef sc, Account *a) {
 
