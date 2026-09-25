@@ -21,37 +21,26 @@ struct Account {
   int risk;
 };
 
-void sendOrderData(SCStudyInterfaceRef sc) {
+void sendOrderData(SCStudyInterfaceRef sc, Order *o) {
+  // SERIALIZE DATA
+  json j;
+  j = {
+      {"symbol", sc.Symbol},   {"sl", o->slPrice},        {"entry", o->entryPrice},
+      {"tp", o->tpPrice},      {"trig", o->triggerPrice}, {"safeEntry", o->safeEntry},
+      {"id", o->entryOrderID}, {"mode", o->orderMode},
+  };
 
-  //----------HTTP POST REQEST----------
+  std::string dataToPost = j.dump();
+  SCString post;
+  post.Format("%s", dataToPost.c_str());
+
+  // HTTP POST REQUEST
   int &RequestState = sc.GetPersistentInt(11);
 
-  // Do data processing
-
-  if (sc.UpdateStartIndex == 0 && sc.IsFullRecalculation) {
-    if (RequestState == HTTP_REQUEST_ERROR || RequestState == HTTP_REQUEST_RECEIVED) {
-      // n_ACSIL::s_HTTPHeader HTTPHeader;
-      // HTTPHeader.Name = "Custom";
-      // HTTPHeader.Value = "Value";
-
-      // Make a request to the server.
-      // When the request is complete and all of the data has been downloaded,
-      // this study function will be called with the file placed into the
-      // sc.HTTPResponse character string array.
-      if (!sc.MakeHTTPPOSTRequest("https://www.sierrachart.com/Test/ACSILPOSTTest.php",
-                                  "Message=PostData", nullptr, 0)) {
-        sc.AddMessageToLog("Error making HTTP request.", 1);
-      }
-
-      RequestState = HTTP_REQUEST_MADE;
-    }
-  }
-
-  if (RequestState == HTTP_REQUEST_MADE && sc.HTTPRequestID != 0) {
-    RequestState = HTTP_REQUEST_RECEIVED;
-
-    // Display the response from the Web server in the Message Log
-    sc.AddMessageToLog(sc.HTTPResponse, 1);
+  // So right now i have to use ngrok to reverse proxy becuase it only works on port 80
+  if (!sc.MakeHTTPPOSTRequest("https://sneer-debug-modulator.ngrok-free.dev/test", post,
+                              nullptr, 0)) {
+    sc.AddMessageToLog("Error making HTTP request.", 1);
   }
 }
 
@@ -164,7 +153,7 @@ SCSFExport scsf_rectangleBoxEntry(SCStudyInterfaceRef sc) {
     sc.MaximumPositionAllowed = 200;
     sc.AllowOnlyOneTradePerBar = 0;
 
-    sc.SendOrdersToTradeService = 1;
+    sc.SendOrdersToTradeService = 0;
 
     sc.Subgraph[0].Name = "risk in pips";
 
@@ -271,6 +260,7 @@ SCSFExport scsf_rectangleBoxEntry(SCStudyInterfaceRef sc) {
         sc.SetAttachedOrders(newOrder);
 
         entryOrder->entryOrderID = sc.BuyEntry(newOrder);
+        sendOrderData(sc, entryOrder);
 
       } else if (x == 2) {
         if (entryOrder->entryPrice > entryOrder->slPrice) {
